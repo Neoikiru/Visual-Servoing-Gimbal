@@ -46,9 +46,15 @@ def calibrate_camera(
     obj_points: List[np.ndarray] = []  # 3d point in real world space.
     img_points: List[np.ndarray] = []  # 2d points in image plane.
 
-    cap = cv2.VideoCapture(camera_id)
+    cap = cv2.VideoCapture(camera_id, cv2.CAP_V4L2)
     if not cap.isOpened():
         raise RuntimeError(f"Failed to open camera {camera_id}.")
+
+    # Force MJPG and 1280x720 @ 30 FPS
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    cap.set(cv2.CAP_PROP_FPS, 30)
 
     frames_captured = 0
     last_capture_time = time.time()
@@ -133,4 +139,4 @@ def save_calibration(mtx: np.ndarray, dist: np.ndarray) -> None:
 
 
 if __name__ == "__main__":
-    calibrate_camera(board_size=(9, 7), required_frames=20, camera_id=1)
+    calibrate_camera(board_size=(9, 7), required_frames=20, camera_id=4)
