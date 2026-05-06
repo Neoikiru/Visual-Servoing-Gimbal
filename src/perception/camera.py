@@ -5,6 +5,8 @@ from typing import Tuple
 import cv2
 import numpy as np
 
+from src.utils.logger import Logger
+
 
 class Camera:
     def __init__(
@@ -16,6 +18,7 @@ class Camera:
         if not self.cap.isOpened():
             self.cap = cv2.VideoCapture(camera_id)
             if not self.cap.isOpened():
+                Logger.critical(f"Could not open camera {camera_id}")
                 raise RuntimeError(f"Could not open camera {camera_id}")
 
         # Force MJPG and 1280x720 @ 30 FPS
@@ -27,7 +30,7 @@ class Camera:
         # Verify
         w = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         h = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-        print(f"[Camera] Initialized {w}x{h} on {camera_id}")
+        Logger.info(f"Initialized {w}x{h} on {camera_id}")
 
         self.mtx = None
         self.dist = None
@@ -41,9 +44,9 @@ class Camera:
                 data = json.load(f)
                 self.mtx = np.array(data["camera_matrix"])
                 self.dist = np.array(data["dist_coeff"])
-            print(f"[Camera] Loaded calibration from {calib_file}")
+            Logger.info(f"Loaded calibration from {calib_file}")
         else:
-            print(f"[Camera] WARNING: Calibration not found at {calib_file}.")
+            Logger.warn(f"Calibration not found at {calib_file}.")
 
     def read(self) -> Tuple[bool, np.ndarray]:
         """Reads a frame and undistorts it."""

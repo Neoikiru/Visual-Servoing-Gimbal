@@ -12,6 +12,7 @@ from mediapipe.tasks.python import vision
 from PySide6.QtCore import QObject, Signal
 
 from src.perception.camera import Camera
+from src.utils.logger import Logger
 
 
 # @generated [partially] Gemini 3.1 Pro: QtApplication Structure and signals.
@@ -60,7 +61,7 @@ class TrackingWorker(QObject):
 
     def run(self):
         """The main perception and estimation loop"""
-        print("[Worker] Tracking Thread Started.")
+        Logger.info("Tracking Thread Started.")
 
         while self.running:
             ret, frame = self.camera.read()
