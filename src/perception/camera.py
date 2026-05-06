@@ -1,0 +1,61 @@
+import json
+from pathlib import Path
+from typing import Tuple
+
+import cv2
+import numpy as np
+
+
+class Camera:
+    def __init__(
+        self,
+        camera_id: int = 4,
+        calib_file: str = "data/calibration/camera_intrinsics.json",
+    ):
+        self.cap = cv2.VideoCapture(camera_id, cv2.CAP_V4L2)
+        if not self.cap.isOpened():
+            self.cap = cv2.VideoCapture(camera_id)
+            if not self.cap.isOpened():
+                raise RuntimeError(f"Could not open camera {camera_id}")
+
+        # Force MJPG and 1280x720 @ 30 FPS
+        self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        self.cap.set(cv2.CAP_PROP_FPS, 30)
+
+        # Verify
+        w = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+        h = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        print(f"[Camera] Initialized {w}x{h} on {camera_id}")
+
+        self.mtx = None
+        self.dist = None
+        self._load_calibration(calib_file)
+
+    def _load_calibration(self, calib_file: str) -> None:
+        """Loads the intrinsic matrix and distortion coefficients."""
+        calib_path = Path(calib_file)
+        if calib_path.exists():
+            with open(calib_path, "r") as f:
+                data = json.load(f)
+                self.mtx = np.array(data["camera_matrix"])
+                self.dist = np.array(data["dist_coeff"])
+            print(f"[Camera] Loaded calibration from {calib_file}")
+        else:
+            print(f"[Camera] WARNING: Calibration not found at {calib_file}.")
+
+    def read(self) -> Tuple[bool, np.ndarray]:
+        """Reads a frame and undistorts it."""
+        ret, frame = self.cap.read()
+        if not ret:
+            return False, frame
+
+        # Apply the flattening if calib file loaded successfully
+        if self.mtx is not None and self.dist is not None:
+            frame = cv2.undistort(frame, self.mtx, self.dist, None, self.mtx)
+
+        return True, frame
+
+    def release(self) -> None:
+        self.cap.release()

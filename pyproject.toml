@@ -1,0 +1,36 @@
+[tool.black]
+line-length = 88
+target-version = ['py312']
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+strict = true
+
+[tool.pylint.master]
+extension-pkg-allow-list = ["cv2"]
+init-hook = 'import sys; sys.path.append(".")'
+
+[tool.pylint.typecheck]
+# This is the magic line that stops OpenCV no-member errors
+generated-members = ["cv2.*"]
+
+[tool.pylint.format]
+# Sync pylint with Black formatter
+max-line-length = 88
+
+[tool.pylint.messages_control]
+disable = [
+    "C0103", # Allow math variables (F, H, P) and numbered script files
+    "R0914", # Allow scripts to have many local variables
+    "R0915", # Allow scripts to have many statements
+    "W1514", # Ignore missing 'utf-8' encoding flags on open()
+    "R0801", # Allow our ML scripts to share extraction logic
+    "C0115", # Ignore missing class docstrings for now
+    "C0116", # Ignore missing function docstrings in offline scripts
+    "C0301", # Let the 'black' formatter handle line lengths, ignore pylint's complaints
+]

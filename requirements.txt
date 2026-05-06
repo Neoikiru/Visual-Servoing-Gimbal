@@ -1,0 +1,9 @@
+numpy
+opencv-python
+mediapipe
+PySide6
+pyqtgraph
+pyserial
+scikit-learn
+onnxruntime
+skl2onnx
