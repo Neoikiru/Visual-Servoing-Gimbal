@@ -24,7 +24,7 @@ class CameraWorker(QThread):
                 continue
 
             # Push the newest frame
-            self.state.set_frame(frame)
+            self.state.set_frame(frame, time.time())
 
             time.sleep(0.005)
 

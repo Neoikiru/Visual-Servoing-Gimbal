@@ -1,8 +1,14 @@
 import sys
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QApplication,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
     QMainWindow,
+    QSlider,
     QVBoxLayout,
     QWidget,
 )
@@ -23,28 +29,92 @@ class TrackerDashboard(QMainWindow):
         self.setWindowTitle("Tracker")
         self.resize(1200, 700)
 
+        self.setStyleSheet("""
+            QMainWindow { background-color: #0E0E0E; }
+            QWidget { color: #E0E0E0; font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; }
+            QGroupBox { border: 1px solid #333333; border-radius: 6px; margin-top: 15px; font-weight: bold; }
+            QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 5px; color: #00A5FF; }
+            QSlider::groove:horizontal { border: 1px solid #222; height: 6px; background: #1A1A1A; border-radius: 3px; }
+            QSlider::handle:horizontal { background: #00A5FF; width: 16px; margin: -5px 0; border-radius: 8px; }
+            QSlider::handle:horizontal:hover { background: #00C8FF; }
+        """)  # noqa: E501
+
         # Main Data Storage
         self.state = SystemState()
 
         # Main Layout
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
-        layout = QVBoxLayout(central_widget)
 
-        # UI Components
+        main_layout = QHBoxLayout(central_widget)
+        main_layout.setContentsMargins(15, 15, 15, 15)
+        main_layout.setSpacing(15)
+
+        left_column = QVBoxLayout()
         self.video_widget = VideoWidget()
-        self.plot_widget = TelemetryPlotWidget(max_points=150)
+        left_column.addWidget(self.video_widget, stretch=3)
 
-        layout.addWidget(self.video_widget, stretch=2)
-        layout.addWidget(self.plot_widget, stretch=1)
+        # Control
+        control_panel = QGroupBox("Kalman Tuning & Live Metrics")
+        control_layout = QGridLayout(control_panel)
+
+        # Sliders
+        self.lbl_horiz = QLabel("Horizon: 150 ms")
+        self.sld_horiz = QSlider(Qt.Horizontal)
+        self.sld_horiz.setRange(0, 500)
+        self.sld_horiz.setValue(150)
+
+        self.lbl_q = QLabel("Accel Noise (Q): 50000")
+        self.sld_q = QSlider(Qt.Horizontal)
+        self.sld_q.setRange(1000, 100000)
+        self.sld_q.setValue(50000)
+
+        self.lbl_r = QLabel("Cam Noise (R): 100")
+        self.sld_r = QSlider(Qt.Horizontal)
+        self.sld_r.setRange(1, 500)
+        self.sld_r.setValue(100)
+
+        # Grid Layout for the Control Panel
+        control_layout.addWidget(self.lbl_horiz, 1, 0)
+        control_layout.addWidget(self.sld_horiz, 1, 1)
+
+        control_layout.addWidget(self.lbl_q, 2, 0)
+        control_layout.addWidget(self.sld_q, 2, 1)
+
+        control_layout.addWidget(self.lbl_r, 3, 0)
+        control_layout.addWidget(self.sld_r, 3, 1)
+
+        for slider in [self.sld_horiz, self.sld_q, self.sld_r]:
+            slider.valueChanged.connect(self._on_slider_changed)
+
+        left_column.addWidget(control_panel, stretch=1)
+
+        # Right column
+        self.plot_widget = TelemetryPlotWidget(max_points=200)
+
+        # main layout
+        main_layout.addLayout(left_column, stretch=1)
+        main_layout.addWidget(self.plot_widget, stretch=1)
 
         # Setup Threading
         self.threads = []
         self._setup_threads()
 
+    def _on_slider_changed(self):
+        h = self.sld_horiz.value() / 1000.0
+        q = float(self.sld_q.value())
+        r = float(self.sld_r.value())
+
+        self.lbl_horiz.setText(f"Prediction Horizon: {int(h * 1000)} ms")
+        self.lbl_q.setText(f"Process Noise (Accel): {int(q)}")
+        self.lbl_r.setText(f"Measurement Noise (R): {int(r)}")
+
+        # Push live tuning to the Spine
+        self.state.update_tuning(h, q, r)
+
     def _setup_threads(self):
         # Create  Workers
-        self.camera_thread = CameraWorker(self.state, camera_id=4)
+        self.camera_thread = CameraWorker(self.state, camera_id=2)
         self.ai_thread = AIWorker(self.state)
         self.estimation_thread = EstimationWorker(self.state)
 

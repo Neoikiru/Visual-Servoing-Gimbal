@@ -112,14 +112,14 @@ class KalmanFilter2D:
         # Outlier rejection
         if mahalanobis_sq > dynamic_gate_limit and pixel_dist > absolute_pixel_limit:
             self.consecutive_gates += 1
-            logger.warning(
+            logger.debug(
                 f"Gated: Mahal {mahalanobis_sq:.1f}, "
                 f"Dist {pixel_dist:.1f}px (Streak: {self.consecutive_gates})"
             )
 
             # LOSS OF TRACK RESET
             if self.consecutive_gates >= self.max_coast_frames:
-                logger.info("Target lost. Hard resetting filter to new position.")
+                logger.debug("Target lost. Hard resetting filter to new position.")
                 self.x = np.zeros((6, 1), dtype=np.float32)
                 self.x[0, 0] = z[0, 0]
                 self.x[1, 0] = z[1, 0]

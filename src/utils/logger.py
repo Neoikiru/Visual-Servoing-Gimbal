@@ -38,4 +38,4 @@ def setup_logger(
 
 
 # Create a global instance
-logger = setup_logger()
+logger = setup_logger(log_level=logging.INFO)

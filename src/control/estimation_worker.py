@@ -1,3 +1,4 @@
+import math
 import time
 
 import cv2
@@ -25,12 +26,18 @@ class EstimationWorker(QThread):
 
         while self.state.check_running():
             # Fetch latest data
-            frame = self.state.get_frame()
+            frame, capture_time = self.state.get_frame()
             if frame is None:
                 time.sleep(0.01)
                 continue
 
             raw_x, raw_y, gesture = self.state.get_detection()
+            logger.debug(f"raw_x: {raw_x}, raw_y: {raw_y}, gesture: {gesture}")
+
+            # Tuning Parameters
+            horizon, q_accel, r_noise = self.state.get_tuning()
+            self.kalman.R = np.eye(2, dtype=np.float32) * r_noise
+            self.kalman.Q[4:6, 4:6] = np.eye(2, dtype=np.float32) * q_accel
 
             # Kalman update (mandatory)
             current_time = time.time()
@@ -59,7 +66,7 @@ class EstimationWorker(QThread):
                 cv2.putText(
                     frame,
                     "Target Lost",
-                    (20, 120),
+                    (20, 80),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.7,
                     (0, 255, 255),
@@ -74,8 +81,7 @@ class EstimationWorker(QThread):
             # Draw Filtered Present
             cv2.circle(frame, (int(filt_x), int(filt_y)), 10, (0, 255, 255), -1)
 
-            # Draw Predicted Future, 100ms ahead
-            horizon = 0.10
+            # Draw Predicted Future\
             future_x = int(filt_x + (vel_x * horizon) + (0.5 * acc_x * (horizon**2)))
             future_y = int(filt_y + (vel_y * horizon) + (0.5 * acc_y * (horizon**2)))
 
@@ -98,11 +104,21 @@ class EstimationWorker(QThread):
                 2,
             )
 
+            # Calculate metrics
+            latency_ms = (time.time() - capture_time) * 1000
+            spatial_err = 0.0
+            if raw_x is not None and raw_y is not None:
+                spatial_err = math.sqrt(
+                    (future_x - raw_x) ** 2 + (future_y - raw_y) ** 2
+                )
+
             # Update for UI
             telemetry_data = {
                 "raw_x": float(raw_x) if raw_x is not None else filt_x,
                 "filt_x": filt_x,
                 "future_x": float(future_x),
+                "latency": latency_ms,
+                "error": spatial_err,
             }
 
             self.frame_ready.emit(frame)
