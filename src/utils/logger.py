@@ -10,8 +10,14 @@ def setup_logger(
 ) -> logging.Logger:
     """
     Sets up a logger. Outputs to both the console and a file.
+    If logger already exists, it updated the log level.
     """
     logger = logging.getLogger(name)
+
+    if logger.hasHandlers():
+        logger.setLevel(log_level)
+        return logger
+
     logger.setLevel(log_level)
 
     # Define the format
@@ -35,7 +41,3 @@ def setup_logger(
     logger.addHandler(file_handler)
 
     return logger
-
-
-# Create a global instance
-logger = setup_logger(log_level=logging.INFO)

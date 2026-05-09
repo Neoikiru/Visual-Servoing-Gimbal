@@ -1,3 +1,4 @@
+import logging
 import math
 import time
 
@@ -8,7 +9,8 @@ from PySide6.QtCore import QThread, Signal
 from src.control.serial_link import SerialLink
 from src.core.state import SystemState
 from src.estimation.kalman import KalmanFilter2D
-from src.utils.logger import logger
+
+logger = logging.getLogger("Tracker")
 
 
 class EstimationWorker(QThread):

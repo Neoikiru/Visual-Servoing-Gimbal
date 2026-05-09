@@ -1,4 +1,5 @@
 import argparse
+import logging
 import sys
 
 from PySide6.QtCore import Qt
@@ -20,7 +21,7 @@ from src.perception.ai_worker import AIWorker
 from src.perception.camera_worker import CameraWorker
 from src.ui.plot_widget import TelemetryPlotWidget
 from src.ui.video_widget import VideoWidget
-from src.utils.logger import logger
+from src.utils.logger import setup_logger
 
 
 # @generated [partially] Gemini 3.1 Pro: QtApplication Structure and signals hints.
@@ -171,7 +172,17 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    log_level = logging.DEBUG if args.debug else logging.INFO
+    logger = setup_logger(log_level=log_level)
+
+    logger.info("Initializing Application...")
+    if args.debug:
+        logger.debug("Debug mode activated via CLI.")
+
     app = QApplication(sys.argv)
     window = TrackerDashboard(args)
     window.show()
-    sys.exit(app.exec())
+
+    exit_code = app.exec()
+    logger.info(f"Application terminated with exit code {exit_code}.")
+    sys.exit(exit_code)

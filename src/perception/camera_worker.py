@@ -1,10 +1,12 @@
+import logging
 import time
 
 from PySide6.QtCore import QThread
 
 from src.core.state import SystemState
 from src.perception.camera import Camera
-from src.utils.logger import logger
+
+logger = logging.getLogger("Tracker")
 
 
 class CameraWorker(QThread):

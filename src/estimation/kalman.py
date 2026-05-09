@@ -8,11 +8,12 @@ Link to the repo:
     https://github.com/rlabbe/Kalman-and-Bayesian-Filters-in-Python
 """
 
+import logging
 from typing import Tuple
 
 import numpy as np
 
-from src.utils.logger import logger
+logger = logging.getLogger("Tracker")
 
 
 # @generated [partially] Gemini 3.1 Pro: Suggested using mahalanobis distance

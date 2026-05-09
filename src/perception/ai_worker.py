@@ -1,4 +1,5 @@
 import json
+import logging
 import time
 from pathlib import Path
 from typing import Dict
@@ -12,7 +13,8 @@ from mediapipe.tasks.python import vision
 from PySide6.QtCore import QThread
 
 from src.core.state import SystemState
-from src.utils.logger import logger
+
+logger = logging.getLogger("Tracker")
 
 
 class AIWorker(QThread):

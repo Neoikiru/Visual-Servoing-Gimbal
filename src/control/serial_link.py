@@ -1,8 +1,9 @@
+import logging
 import time
 
 import serial
 
-from src.utils.logger import logger
+logger = logging.getLogger("Tracker")
 
 
 class SerialLink:

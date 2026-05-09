@@ -1,11 +1,12 @@
 import json
+import logging
 from pathlib import Path
 from typing import Tuple
 
 import cv2
 import numpy as np
 
-from src.utils.logger import logger
+logger = logging.getLogger("Tracker")
 
 
 class Camera:
