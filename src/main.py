@@ -1,3 +1,4 @@
+import argparse
 import sys
 
 from PySide6.QtCore import Qt
@@ -24,8 +25,9 @@ from src.utils.logger import logger
 
 # @generated [partially] Gemini 3.1 Pro: QtApplication Structure and signals hints.
 class TrackerDashboard(QMainWindow):
-    def __init__(self):
+    def __init__(self, args):
         super().__init__()
+        self.args = args
         self.setWindowTitle("Tracker")
         self.resize(1200, 700)
 
@@ -114,9 +116,11 @@ class TrackerDashboard(QMainWindow):
 
     def _setup_threads(self):
         # Create  Workers
-        self.camera_thread = CameraWorker(self.state, camera_id=2)
+        cam_source = self.args.video if self.args.video else self.args.camera
+        self.camera_thread = CameraWorker(self.state, camera_id=cam_source)
+
         self.ai_thread = AIWorker(self.state)
-        self.estimation_thread = EstimationWorker(self.state)
+        self.estimation_thread = EstimationWorker(self.state, self.args)
 
         # Connect Signals
         self.estimation_thread.frame_ready.connect(self.video_widget.update_frame)
@@ -145,7 +149,29 @@ class TrackerDashboard(QMainWindow):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Tracking System")
+    parser.add_argument(
+        "--camera", type=int, default=4, help="Camera device index (default: 4)"
+    )
+    parser.add_argument(
+        "--video",
+        type=str,
+        default=None,
+        help="Path to a test video file (overrides --camera)",
+    )
+    parser.add_argument(
+        "--port", type=str, default="/dev/ttyACM0", help="Arduino Serial Port"
+    )
+    parser.add_argument("--baud", type=int, default=115200, help="Serial Baudrate")
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Run without physical hardware (Mock Serial)",
+    )
+
+    args = parser.parse_args()
+
     app = QApplication(sys.argv)
-    window = TrackerDashboard()
+    window = TrackerDashboard(args)
     window.show()
     sys.exit(app.exec())

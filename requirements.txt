@@ -7,3 +7,4 @@ pyserial
 scikit-learn
 onnxruntime
 skl2onnx
+pyserial

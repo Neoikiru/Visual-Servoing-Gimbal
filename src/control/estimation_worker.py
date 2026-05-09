@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 from PySide6.QtCore import QThread, Signal
 
+from src.control.serial_link import SerialLink
 from src.core.state import SystemState
 from src.estimation.kalman import KalmanFilter2D
 from src.utils.logger import logger
@@ -15,11 +16,16 @@ class EstimationWorker(QThread):
     frame_ready = Signal(np.ndarray)
     telemetry_ready = Signal(dict)
 
-    def __init__(self, state: SystemState):
+    def __init__(self, state: SystemState, args):
         super().__init__()
         self.state = state
         self.kalman = KalmanFilter2D(dt=0.016)
         self.last_time = time.time()
+
+        self.serial = SerialLink(
+            port=args.port, baudrate=args.baud, debug_mode=args.debug
+        )
+        self.serial.connect()
 
     def run(self):
         logger.info("Estimation Thread Started.")
@@ -32,7 +38,8 @@ class EstimationWorker(QThread):
                 continue
 
             raw_x, raw_y, gesture = self.state.get_detection()
-            logger.debug(f"raw_x: {raw_x}, raw_y: {raw_y}, gesture: {gesture}")
+            if time.time() % 1.0 < 0.01:
+                logger.debug(f"raw_x: {raw_x}, raw_y: {raw_y}, gesture: {gesture}")
 
             # Tuning Parameters
             horizon, q_accel, r_noise = self.state.get_tuning()
@@ -85,6 +92,9 @@ class EstimationWorker(QThread):
             future_x = int(filt_x + (vel_x * horizon) + (0.5 * acc_x * (horizon**2)))
             future_y = int(filt_y + (vel_y * horizon) + (0.5 * acc_y * (horizon**2)))
 
+            # Send to hardware
+            self.serial.send_target(future_x, future_y)
+
             box_size = 40
             cv2.rectangle(
                 frame,
@@ -128,3 +138,8 @@ class EstimationWorker(QThread):
             time.sleep(0.016)
 
         logger.info("Estimation Thread Stopped.")
+
+    def quit(self):
+        """Ensure we close the serial port on shutdown."""
+        self.serial.close()
+        super().quit()
