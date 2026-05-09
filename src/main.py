@@ -23,7 +23,6 @@ from src.perception.ai_worker import AIWorker
 from src.perception.camera_worker import CameraWorker
 from src.ui.plot_widget import TelemetryPlotWidget
 from src.ui.video_widget import VideoWidget
-from src.utils.config import ConfigManager
 from src.utils.csv_logger import CSVLogger
 from src.utils.logger import setup_logger
 
@@ -53,7 +52,6 @@ class TrackerDashboard(QMainWindow):
 
         # Main Data Storage
         self.state = SystemState()
-        self.config_mgr = ConfigManager()
         self.csv_logger = CSVLogger(disabled=self.args.no_csv)
 
         # Main Layout
@@ -74,19 +72,19 @@ class TrackerDashboard(QMainWindow):
         tab_estimation = QWidget()
         est_layout = QGridLayout(tab_estimation)
 
-        c = self.config_mgr.config["kalman"]
-        self.lbl_horiz = QLabel(f"Horizon: {int(c['horizon'] * 1000)} ms")
+        h, q, r = self.state.get_tuning()
+        self.lbl_horiz = QLabel(f"Horizon: {int(h * 1000)} ms")
         self.sld_horiz = QSlider(Qt.Horizontal)
         self.sld_horiz.setRange(0, 500)
-        self.sld_horiz.setValue(int(c["horizon"] * 1000))
-        self.lbl_q = QLabel(f"Accel Noise: {int(c['q_accel'])}")
+        self.sld_horiz.setValue(int(h * 1000))
+        self.lbl_q = QLabel(f"Accel Noise: {int(q)}")
         self.sld_q = QSlider(Qt.Horizontal)
         self.sld_q.setRange(1000, 100000)
-        self.sld_q.setValue(int(c["q_accel"]))
-        self.lbl_r = QLabel(f"Cam Noise: {int(c['r_noise'])}")
+        self.sld_q.setValue(int(q))
+        self.lbl_r = QLabel(f"Cam Noise: {int(r)}")
         self.sld_r = QSlider(Qt.Horizontal)
         self.sld_r.setRange(1, 500)
-        self.sld_r.setValue(int(c["r_noise"]))
+        self.sld_r.setValue(int(r))
 
         # Button logic
         if self.args.video:
@@ -145,29 +143,43 @@ class TrackerDashboard(QMainWindow):
         jog_layout.addWidget(self.btn_jog_right, 1, 2)
         jog_layout.addWidget(self.btn_jog_down, 2, 1)
 
-        p = self.config_mgr.config["pid"]
-        self.lbl_kp = QLabel(f"Kp (Prop): {p['kp']}")
-        self.sld_kp = QSlider(Qt.Horizontal)
-        self.sld_kp.setRange(0, 500)
-        self.sld_kp.setValue(int(p["kp"] * 100))
-        self.lbl_kd = QLabel(f"Kd (Deriv): {p['kd']}")
-        self.sld_kd = QSlider(Qt.Horizontal)
-        self.sld_kd.setRange(0, 500)
-        self.sld_kd.setValue(int(p["kd"] * 100))
+        kp_x, kd_x, kp_y, kd_y = self.state.get_pid()
+        self.lbl_kp_x = QLabel(f"Kp_X (Prop): {kp_x}")
+        self.sld_kp_x = QSlider(Qt.Horizontal)
+        self.sld_kp_x.setRange(0, 500)
+        self.sld_kp_x.setValue(int(kp_x * 100))
+        self.lbl_kd_x = QLabel(f"Kd_X (Deriv): {kd_x}")
+        self.sld_kd_x = QSlider(Qt.Horizontal)
+        self.sld_kd_x.setRange(0, 500)
+        self.sld_kd_x.setValue(int(kd_x * 100))
+
+        self.lbl_kp_y = QLabel(f"Kp_Y (Prop): {kp_y}")
+        self.sld_kp_y = QSlider(Qt.Horizontal)
+        self.sld_kp_y.setRange(0, 500)
+        self.sld_kp_y.setValue(int(kp_y * 100))
+        self.lbl_kd_y = QLabel(f"Kd_Y (Deriv): {kd_y}")
+        self.sld_kd_y = QSlider(Qt.Horizontal)
+        self.sld_kd_y.setRange(0, 500)
+        self.sld_kd_y.setValue(int(kd_y * 100))
 
         hw_layout.addWidget(self.btn_estop, 0, 0, 1, 2)
         hw_layout.addWidget(self.btn_set_home, 1, 0)
         hw_layout.addWidget(self.btn_go_home, 1, 1)
         hw_layout.addWidget(jog_group, 2, 0, 2, 1)
-        hw_layout.addWidget(self.lbl_kp, 2, 1)
-        hw_layout.addWidget(self.sld_kp, 3, 1)
-        hw_layout.addWidget(self.lbl_kd, 4, 1)
-        hw_layout.addWidget(self.sld_kd, 5, 1)
+        hw_layout.addWidget(self.lbl_kp_x, 2, 1)
+        hw_layout.addWidget(self.sld_kp_x, 3, 1)
+        hw_layout.addWidget(self.lbl_kd_x, 4, 1)
+        hw_layout.addWidget(self.sld_kd_x, 5, 1)
+
+        hw_layout.addWidget(self.lbl_kp_y, 6, 1)
+        hw_layout.addWidget(self.sld_kp_y, 7, 1)
+        hw_layout.addWidget(self.lbl_kd_y, 8, 1)
+        hw_layout.addWidget(self.sld_kd_y, 9, 1)
 
         self.tabs.addTab(tab_estimation, "🧮 Software Tuning")
         self.tabs.addTab(tab_hardware, "⚙️ Hardware / PID")
 
-        left_column.addWidget(self.tabs, stretch=1)
+        left_column.addWidget(self.tabs, stretch=2)
 
         # Right column
         self.plot_widget = TelemetryPlotWidget(max_points=200)
@@ -176,7 +188,15 @@ class TrackerDashboard(QMainWindow):
         main_layout.addLayout(left_column, stretch=1)
         main_layout.addWidget(self.plot_widget, stretch=1)
 
-        for s in [self.sld_horiz, self.sld_q, self.sld_r, self.sld_kp, self.sld_kd]:
+        for s in [
+            self.sld_horiz,
+            self.sld_q,
+            self.sld_r,
+            self.sld_kp_x,
+            self.sld_kd_x,
+            self.sld_kp_y,
+            self.sld_kd_y,
+        ]:
             s.valueChanged.connect(self._on_slider_changed)
 
         self.btn_save_config.clicked.connect(self._on_save_config_clicked)
@@ -203,10 +223,8 @@ class TrackerDashboard(QMainWindow):
 
     def _on_save_config_clicked(self):
         """Pull slider values and save to json"""
-        self.config_mgr.config["kalman"]["horizon"] = self.sld_horiz.value() / 1000.0
-        self.config_mgr.config["kalman"]["q_accel"] = float(self.sld_q.value())
-        self.config_mgr.config["kalman"]["r_noise"] = float(self.sld_r.value())
-        self.config_mgr.save()
+        self.state.save_config()
+        logger.info("Saved config to disk.")
 
     def _on_slider_changed(self):
         h = self.sld_horiz.value() / 1000.0
@@ -220,11 +238,19 @@ class TrackerDashboard(QMainWindow):
         # Push live tuning
         self.state.update_tuning(h, q, r)
 
-        kp = self.sld_kp.value() / 100.0
-        kd = self.sld_kd.value() / 100.0
+        kp_x = self.sld_kp_x.value() / 100.0
+        kd_x = self.sld_kd_x.value() / 100.0
 
-        self.lbl_kp.setText(f"Kp (Prop): {kp:.2f}")
-        self.lbl_kd.setText(f"Kd (Deriv): {kd:.2f}")
+        kp_y = self.sld_kp_y.value() / 100.0
+        kd_y = self.sld_kd_y.value() / 100.0
+
+        self.lbl_kp_x.setText(f"Kp_X (Prop): {kp_x:.2f}")
+        self.lbl_kd_x.setText(f"Kd_X (Deriv): {kd_x:.2f}")
+
+        self.lbl_kp_y.setText(f"Kp_Y (Prop): {kp_y:.2f}")
+        self.lbl_kd_y.setText(f"Kd_Y (Deriv): {kd_y:.2f}")
+
+        self.state.update_pid(kp_x, kd_x, kp_y, kd_y)
 
     @Slot()
     def _on_video_finished(self):
@@ -251,9 +277,8 @@ class TrackerDashboard(QMainWindow):
         self.state.request_reset = True
         self.state.set_paused(False)
 
-        if self.args.video:
-            self.csv_logger.start()
-            self.camera_thread.rewind_requested = True
+        self.csv_logger.start()
+        self.camera_thread.rewind_requested = True
 
     @Slot(dict)
     def _on_telemetry_received(self, data: dict):

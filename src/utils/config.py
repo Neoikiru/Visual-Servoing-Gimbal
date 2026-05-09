@@ -14,7 +14,12 @@ class ConfigManager:
     def _default_config(self):
         return {
             "kalman": {"horizon": 0.15, "q_accel": 50000.0, "r_noise": 100.0},
-            "pid": {"kp": 1.0, "kd": 0.1},
+            "pid": {
+                "kp_x": 1.0,
+                "kd_x": 0.1,
+                "kp_y": 1.0,
+                "kd_y": 1.0,
+            },
             "hardware": {"steps_per_pixel_x": 0.45, "steps_per_pixel_y": 0.45},
         }
 

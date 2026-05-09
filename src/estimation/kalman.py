@@ -19,7 +19,7 @@ logger = logging.getLogger("Tracker")
 # @generated [partially] Gemini 3.1 Pro: Suggested using mahalanobis distance
 #   to filter out the outliers and a lot of help with debugging...
 class KalmanFilter2D:
-    def __init__(self, dt: float = 0.016):
+    def __init__(self):
         # State: [x, y, vx, vy, ax, ay]
         self.x = np.zeros((6, 1), dtype=np.float32)
 

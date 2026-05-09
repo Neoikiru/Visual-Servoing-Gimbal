@@ -3,32 +3,58 @@ from typing import Optional, Tuple
 
 import numpy as np
 
+from src.utils.config import ConfigManager
+
 
 class SystemState:
     """Thread-safe shared memory for the tracking pipeline."""
 
     def __init__(self):
         self._lock = threading.Lock()
-
-        # Main options
+        # Main
         self.request_reset: bool = False
         self._tracking_enabled: bool = False
         self.is_running = True
         self._is_paused = False
 
-        # Camera Data
+        # Config manager
+        self.config_mgr = ConfigManager()
+        cfg = self.config_mgr.config
+
+        # Data Buffers
         self._current_frame: Optional[np.ndarray] = None
         self._frame_capture_time: float = 0.0
-
-        # AI Data
         self._raw_x: Optional[float] = None
         self._raw_y: Optional[float] = None
         self._gesture: str = "Searching..."
 
         # Parameters for tuning
-        self.horizon: float = 0.15  # Predict ahead amount
-        self.q_accel: float = 50000.0  # Process Noise (Acceleration)
-        self.r_noise: float = 100.0  # Measurement Noise
+        self.horizon: float = cfg["kalman"]["horizon"]  # Predict ahead amount
+        self.q_accel: float = cfg["kalman"]["q_accel"]  # Process Noise (Acceleration)
+        self.r_noise: float = cfg["kalman"]["r_noise"]  # Measurement Noise
+
+        # PID (PD)
+        self.kp_x: float = cfg["pid"]["kp_x"]
+        self.kd_x: float = cfg["pid"]["kd_x"]
+        self.kp_y: float = cfg["pid"]["kp_y"]
+        self.kd_y: float = cfg["pid"]["kd_y"]
+
+        # Hardware
+        self.steps_per_pixel_x: float = cfg["hardware"]["steps_per_pixel_x"]
+        self.steps_per_pixel_y: float = cfg["hardware"]["steps_per_pixel_y"]
+
+    def get_hardware_ratios(self) -> Tuple[float, float]:
+        with self._lock:
+            return self.steps_per_pixel_x, self.steps_per_pixel_y
+
+    def update_pid(self, kp_x: float, kd_x: float, kp_y: float, kd_y: float):
+        with self._lock:
+            self.kp_x, self.kd_x = kp_x, kd_x
+            self.kp_y, self.kd_y = kp_y, kd_y
+
+    def get_pid(self) -> tuple[float, float, float, float]:
+        with self._lock:
+            return self.kp_x, self.kd_x, self.kp_y, self.kd_y
 
     def set_paused(self, paused: bool):
         with self._lock:
@@ -81,6 +107,22 @@ class SystemState:
             return self.horizon, self.q_accel, self.r_noise
 
     # System Control
+
+    def save_config(self):
+        """Syncs active variables to JSON and saves to disk."""
+        with self._lock:
+            cfg = self.config_mgr.config
+            cfg["kalman"]["horizon"] = self.horizon
+            cfg["kalman"]["q_accel"] = self.q_accel
+            cfg["kalman"]["r_noise"] = self.r_noise
+            cfg["pid"]["kp_x"] = self.kp_x
+            cfg["pid"]["kd_x"] = self.kd_x
+            cfg["pid"]["kp_y"] = self.kp_y
+            cfg["pid"]["kd_y"] = self.kd_y
+            cfg["hardware"]["steps_per_pixel_x"] = self.steps_per_pixel_x
+            cfg["hardware"]["steps_per_pixel_y"] = self.steps_per_pixel_y
+            self.config_mgr.save()
+
     def stop(self):
         with self._lock:
             self.is_running = False

@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 from PySide6.QtCore import QThread, Signal
 
+from src.control.pid import PDController
 from src.control.serial_link import SerialLink
 from src.core.state import SystemState
 from src.estimation.kalman import KalmanFilter2D
@@ -21,9 +22,19 @@ class EstimationWorker(QThread):
     def __init__(self, state: SystemState, args):
         super().__init__()
         self.state = state
-        self.kalman = KalmanFilter2D(dt=0.016)
+
+        # Initialize Kalman
+        self.kalman = KalmanFilter2D()
         self.last_time = time.time()
 
+        # Initialize PID
+        kp_x, kd_x, kp_y, kd_y = state.get_pid()
+        self.pd_x = PDController(kp=kp_x, kd=kd_x)
+        self.pd_y = PDController(kp=kp_y, kd=kd_y)
+
+        self.steps_per_pixel_x, self.steps_per_pixel_y = state.get_hardware_ratios()
+
+        # Initialize Serial Comms
         self.serial = SerialLink(
             port=args.port, baudrate=args.baud, debug_mode=args.debug
         )
@@ -107,9 +118,40 @@ class EstimationWorker(QThread):
             future_x = int(filt_x + (vel_x * horizon) + (0.5 * acc_x * (horizon**2)))
             future_y = int(filt_y + (vel_y * horizon) + (0.5 * acc_y * (horizon**2)))
 
+            # update PID
+            kp_x, kd_x, kp_y, kd_y = self.state.get_pid()
+            self.pd_x.update_gains(kp_x, kd_x)
+            self.pd_y.update_gains(kp_y, kd_y)
+
+            # Get screen center to target
+            h, w = frame.shape[:2]
+            center_x, center_y = w / 2.0, h / 2.0
+
+            # Crosshair in the center
+            cv2.drawMarker(
+                frame,
+                (int(center_x), int(center_y)),
+                (0, 255, 0),
+                cv2.MARKER_CROSS,
+                40,
+                1,
+            )
+
+            # Get error
+            err_x = future_x - center_x
+            err_y = future_y - center_y
+
+            # Get PID output
+            pd_out_x = self.pd_x.compute(err_x, current_time)
+            pd_out_y = self.pd_y.compute(err_y, current_time)
+
+            # Convert pixels to steps
+            steps_x = int(pd_out_x * self.steps_per_pixel_x)
+            steps_y = int(-pd_out_y * self.steps_per_pixel_y)
+
             # Send to hardware
             if self.state.is_tracking_enabled() or self.serial.debug_mode:
-                self.serial.send_target(future_x, future_y)
+                self.serial.send_target(steps_x, steps_y)
 
             box_size = 40
             cv2.rectangle(
