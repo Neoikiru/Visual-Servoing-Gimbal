@@ -12,15 +12,15 @@ logger = logging.getLogger("Tracker")
 class Camera:
     def __init__(
         self,
-        camera_id: int = 4,
+        source: Union[int, str],  # noqa: F821
         calib_file: str = "data/calibration/camera_intrinsics.json",
     ):
-        self.cap = cv2.VideoCapture(camera_id, cv2.CAP_V4L2)
+        self.cap = cv2.VideoCapture(source, cv2.CAP_V4L2)
         if not self.cap.isOpened():
-            self.cap = cv2.VideoCapture(camera_id)
+            self.cap = cv2.VideoCapture(source)
             if not self.cap.isOpened():
-                logger.critical(f"Could not open camera {camera_id}")
-                raise RuntimeError(f"Could not open camera {camera_id}")
+                logger.critical(f"Could not open camera {source}")
+                raise RuntimeError(f"Could not open camera {source}")
 
         # Force MJPG and 1280x720 @ 30 FPS
         self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
@@ -31,7 +31,7 @@ class Camera:
         # Verify
         w = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         h = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-        logger.info(f"Initialized {w}x{h} on {camera_id}")
+        logger.info(f"Initialized {w}x{h} on {source}")
 
         self.mtx = None
         self.dist = None

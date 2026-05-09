@@ -112,3 +112,22 @@ class TelemetryPlotWidget(QWidget):
             avg_err = sum(self.err_data) / len(self.err_data)
             self.lbl_avg_lat.setText(f"Avg Latency: {avg_lat:.1f} ms")
             self.lbl_avg_err.setText(f"Avg Error: {avg_err:.1f} px")
+
+    @Slot()
+    def clear_plots(self):
+        """Wipes all data buffers and resets the frame count."""
+        self.time_data.clear()
+        self.raw_x_data.clear()
+        self.filt_x_data.clear()
+        self.future_x_data.clear()
+        self.lat_data.clear()
+        self.err_data.clear()
+        self.frame_count = 0
+
+        # Redraw to clear the screen
+        empty = np.array([])
+        self.line_raw.setData(empty, empty)
+        self.line_filt.setData(empty, empty)
+        self.line_fut.setData(empty, empty)
+        self.line_lat.setData(empty, empty)
+        self.line_err.setData(empty, empty)

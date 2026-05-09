@@ -1,0 +1,15 @@
+{
+    "kalman": {
+        "horizon": 0.1,
+        "q_accel": 50000.0,
+        "r_noise": 100.0
+    },
+    "pid": {
+        "kp": 1.0,
+        "kd": 0.1
+    },
+    "hardware": {
+        "steps_per_pixel_x": 0.45,
+        "steps_per_pixel_y": 0.45
+    }
+}

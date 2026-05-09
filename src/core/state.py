@@ -9,7 +9,12 @@ class SystemState:
 
     def __init__(self):
         self._lock = threading.Lock()
+
+        # Main options
+        self.request_reset: bool = False
+        self._tracking_enabled: bool = False
         self.is_running = True
+        self._is_paused = False
 
         # Camera Data
         self._current_frame: Optional[np.ndarray] = None
@@ -24,6 +29,22 @@ class SystemState:
         self.horizon: float = 0.15  # Predict ahead amount
         self.q_accel: float = 50000.0  # Process Noise (Acceleration)
         self.r_noise: float = 100.0  # Measurement Noise
+
+    def set_paused(self, paused: bool):
+        with self._lock:
+            self._is_paused = paused
+
+    def is_paused(self) -> bool:
+        with self._lock:
+            return self._is_paused
+
+    def set_tracking(self, enabled: bool):
+        with self._lock:
+            self._tracking_enabled = enabled
+
+    def is_tracking_enabled(self) -> bool:
+        with self._lock:
+            return self._tracking_enabled
 
     # Frame Methods
     def set_frame(self, frame: np.ndarray, capture_time: float):

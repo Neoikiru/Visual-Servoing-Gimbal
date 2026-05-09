@@ -56,6 +56,10 @@ class AIWorker(QThread):
         logger.info("AI Thread Started.")
 
         while self.state.check_running():
+            if self.state.is_paused():
+                time.sleep(0.05)
+                continue
+
             frame, _ = self.state.get_frame()
             if frame is None:
                 logger.debug("Frame is None.")

@@ -33,6 +33,19 @@ class EstimationWorker(QThread):
         logger.info("Estimation Thread Started.")
 
         while self.state.check_running():
+            if self.state.is_paused():
+                self.last_time = time.time()
+                time.sleep(0.05)
+                continue
+
+            # Rewind request
+            if self.state.request_reset:
+                logger.info("Wiping Kalman Filter state for new test run.")
+                self.kalman.x = np.zeros((6, 1), dtype=np.float32)
+                self.kalman.P = np.eye(6, dtype=np.float32) * 500.0
+                self.kalman.initialized = False
+                self.state.request_reset = False
+
             # Fetch latest data
             frame, capture_time = self.state.get_frame()
             if frame is None:
@@ -95,7 +108,8 @@ class EstimationWorker(QThread):
             future_y = int(filt_y + (vel_y * horizon) + (0.5 * acc_y * (horizon**2)))
 
             # Send to hardware
-            self.serial.send_target(future_x, future_y)
+            if self.state.is_tracking_enabled() or self.serial.debug_mode:
+                self.serial.send_target(future_x, future_y)
 
             box_size = 40
             cv2.rectangle(
