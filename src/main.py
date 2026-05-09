@@ -24,6 +24,7 @@ from src.perception.camera_worker import CameraWorker
 from src.ui.plot_widget import TelemetryPlotWidget
 from src.ui.video_widget import VideoWidget
 from src.utils.config import ConfigManager
+from src.utils.csv_logger import CSVLogger
 from src.utils.logger import setup_logger
 
 
@@ -53,6 +54,7 @@ class TrackerDashboard(QMainWindow):
         # Main Data Storage
         self.state = SystemState()
         self.config_mgr = ConfigManager()
+        self.csv_logger = CSVLogger(disabled=self.args.no_csv)
 
         # Main Layout
         central_widget = QWidget()
@@ -179,6 +181,10 @@ class TrackerDashboard(QMainWindow):
 
         self.btn_save_config.clicked.connect(self._on_save_config_clicked)
 
+        # Start data recording
+        if self.args.video:
+            self.csv_logger.start()
+
         # Setup Threading
         self.threads = []
         self._setup_threads()
@@ -188,9 +194,11 @@ class TrackerDashboard(QMainWindow):
         self.state.set_tracking(checked)
         if checked:
             logger.info("Hardware Tracking Enabled.")
+            self.csv_logger.start()
             self.btn_primary_action.setText("🔴 Disable Tracking")
         else:
             logger.info("Hardware Tracking Disabled.")
+            self.csv_logger.save()
             self.btn_primary_action.setText("🎯 Enable Tracking")
 
     def _on_save_config_clicked(self):
@@ -220,7 +228,8 @@ class TrackerDashboard(QMainWindow):
 
     @Slot()
     def _on_video_finished(self):
-        logger.info("UI recognized video end. Ready for next test cycle.")
+        logger.info("Recognized video end.")
+        self.csv_logger.save()
         self.btn_primary_action.setText("🔄 Reset And Run Test")
         self.btn_primary_action.setEnabled(True)
         self.btn_primary_action.setStyleSheet(
@@ -243,7 +252,17 @@ class TrackerDashboard(QMainWindow):
         self.state.set_paused(False)
 
         if self.args.video:
+            self.csv_logger.start()
             self.camera_thread.rewind_requested = True
+
+    @Slot(dict)
+    def _on_telemetry_received(self, data: dict):
+        """Hub for incoming telemetry data."""
+        # Update the Graphs
+        self.plot_widget.update_plots(data)
+
+        # Feed the CSV Logger
+        self.csv_logger.add_data(data)
 
     def _setup_threads(self):
         # Create  Workers
@@ -256,7 +275,7 @@ class TrackerDashboard(QMainWindow):
 
         # Connect Signals
         self.estimation_thread.frame_ready.connect(self.video_widget.update_frame)
-        self.estimation_thread.telemetry_ready.connect(self.plot_widget.update_plots)
+        self.estimation_thread.telemetry_ready.connect(self._on_telemetry_received)
         if self.args.video:
             self.camera_thread.video_finished.connect(self._on_video_finished)
 
@@ -272,6 +291,7 @@ class TrackerDashboard(QMainWindow):
     def closeEvent(self, event):
         """Ensure camera release and the thread dies cleanly"""
         logger.info("Shutting Down...")
+        self.csv_logger.save()
         self.state.stop()
 
         for thread in self.threads:
@@ -301,6 +321,11 @@ if __name__ == "__main__":
         "--debug",
         action="store_true",
         help="Run without physical hardware (Mock Serial)",
+    )
+    parser.add_argument(
+        "--no-csv",
+        action="store_true",
+        help="Disables CSV logging",
     )
 
     args = parser.parse_args()

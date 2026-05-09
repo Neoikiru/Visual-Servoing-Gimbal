@@ -143,6 +143,9 @@ class EstimationWorker(QThread):
                 "raw_x": float(raw_x) if raw_x is not None else filt_x,
                 "filt_x": filt_x,
                 "future_x": float(future_x),
+                "raw_y": float(raw_y) if raw_y is not None else filt_x,
+                "filt_y": filt_y,
+                "future_y": float(future_y),
                 "latency": latency_ms,
                 "error": spatial_err,
             }
