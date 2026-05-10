@@ -2,6 +2,7 @@
 Worker thread for state estimation and control loop processing.
 """
 
+import collections
 import logging
 import math
 import time
@@ -33,6 +34,7 @@ class EstimationWorker(QThread):  # pylint: disable=too-many-instance-attributes
         """Initializes the estimation worker with system state and CLI arguments."""
         super().__init__()
         self.state = state
+        self.debug = args.debug
 
         # Initialize Kalman
         self.kalman = KalmanFilter2D()
@@ -51,6 +53,9 @@ class EstimationWorker(QThread):  # pylint: disable=too-many-instance-attributes
         self.pending_steps_y = 0.0
 
         self.max_steps_per_sec = 5000.0
+
+        # Prediction Buffer for error calculation
+        self.prediction_buffer = collections.deque(maxlen=100)
 
         # Initialize Serial Comms
         self.serial = SerialLink(
@@ -77,6 +82,7 @@ class EstimationWorker(QThread):  # pylint: disable=too-many-instance-attributes
                 self.kalman.initialized = False
                 self.pending_steps_x = 0.0
                 self.pending_steps_y = 0.0
+                self.prediction_buffer.clear()
                 self.state.request_reset = False
 
             # Fetch latest data
@@ -99,8 +105,10 @@ class EstimationWorker(QThread):  # pylint: disable=too-many-instance-attributes
             dt = current_time - self.last_time
             self.last_time = current_time
 
-            if self.state.is_tracking_enabled() and (
-                abs(self.pending_steps_x) > 0 or abs(self.pending_steps_y) > 0
+            if (
+                self.state.is_tracking_enabled()
+                and (abs(self.pending_steps_x) > 0 or abs(self.pending_steps_y) > 0)
+                and not self.debug
             ):
                 # Max steps hardware can physically traverse in this frame window
                 step_limit_dt = self.max_steps_per_sec * dt
@@ -165,6 +173,10 @@ class EstimationWorker(QThread):  # pylint: disable=too-many-instance-attributes
             # Draw Predicted Future\
             future_x = int(filt_x + (vel_x * horizon) + (0.5 * acc_x * (horizon**2)))
             future_y = int(filt_y + (vel_y * horizon) + (0.5 * acc_y * (horizon**2)))
+
+            # Store prediction in buffer for future error calculation
+            # We store (target_time, pred_x, pred_y)
+            self.prediction_buffer.append((current_time + horizon, future_x, future_y))
 
             # update PID
             kp_x, kd_x, kp_y, kd_y = self.state.get_pid()
@@ -237,9 +249,29 @@ class EstimationWorker(QThread):  # pylint: disable=too-many-instance-attributes
             # Calculate metrics
             latency_ms = (time.time() - capture_time) * 1000
             spatial_err = 0.0
-            if raw_x is not None and raw_y is not None:
+
+            # Find the prediction that was made for this current time
+            # We look for the prediction with target_time closest to current_time
+            best_pred = None
+            min_dt = float("inf")
+
+            while self.prediction_buffer:
+                target_t, px, py = self.prediction_buffer[0]
+                dt_pred = abs(target_t - current_time)
+
+                if dt_pred < min_dt:
+                    min_dt = dt_pred
+                    best_pred = (px, py)
+                    if target_t < current_time:
+                        self.prediction_buffer.popleft()
+                    else:
+                        break
+                else:
+                    break
+
+            if best_pred is not None and raw_x is not None and raw_y is not None:
                 spatial_err = math.sqrt(
-                    (future_x - raw_x) ** 2 + (future_y - raw_y) ** 2
+                    (best_pred[0] - raw_x) ** 2 + (best_pred[1] - raw_y) ** 2
                 )
 
             # Update for UI
