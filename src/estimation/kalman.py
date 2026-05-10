@@ -56,7 +56,7 @@ class KalmanFilter2D:
 
         self.initialized = False
         self.consecutive_gates = 0
-        self.max_coast_frames = 15
+        self.max_coast_frames = 30
 
     def _update_F(self, dt: float) -> None:
         """Kinematics for Constant Acceleration."""

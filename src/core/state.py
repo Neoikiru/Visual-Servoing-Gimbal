@@ -42,10 +42,16 @@ class SystemState:
         # Hardware
         self.steps_per_pixel_x: float = cfg["hardware"]["steps_per_pixel_x"]
         self.steps_per_pixel_y: float = cfg["hardware"]["steps_per_pixel_y"]
+        self.pixels_per_step_x: float = cfg["hardware"]["pixels_per_step_x"]
+        self.pixels_per_step_y: float = cfg["hardware"]["pixels_per_step_y"]
 
     def get_hardware_ratios(self) -> Tuple[float, float]:
         with self._lock:
             return self.steps_per_pixel_x, self.steps_per_pixel_y
+
+    def get_feedforward_ratios(self):
+        with self._lock:
+            return self.pixels_per_step_x, self.pixels_per_step_y
 
     def update_pid(self, kp_x: float, kd_x: float, kp_y: float, kd_y: float):
         with self._lock:

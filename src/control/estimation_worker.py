@@ -32,7 +32,14 @@ class EstimationWorker(QThread):
         self.pd_x = PDController(kp=kp_x, kd=kd_x)
         self.pd_y = PDController(kp=kp_y, kd=kd_y)
 
+        # FeedForward
         self.steps_per_pixel_x, self.steps_per_pixel_y = state.get_hardware_ratios()
+        self.px_per_step_x, self.px_per_step_y = state.get_feedforward_ratios()
+
+        self.pending_steps_x = 0.0
+        self.pending_steps_y = 0.0
+
+        self.max_steps_per_sec = 5000.0
 
         # Initialize Serial Comms
         self.serial = SerialLink(
@@ -55,6 +62,8 @@ class EstimationWorker(QThread):
                 self.kalman.x = np.zeros((6, 1), dtype=np.float32)
                 self.kalman.P = np.eye(6, dtype=np.float32) * 500.0
                 self.kalman.initialized = False
+                self.pending_steps_x = 0.0
+                self.pending_steps_y = 0.0
                 self.state.request_reset = False
 
             # Fetch latest data
@@ -76,6 +85,32 @@ class EstimationWorker(QThread):
             current_time = time.time()
             dt = current_time - self.last_time
             self.last_time = current_time
+
+            if self.state.is_tracking_enabled() and (
+                abs(self.pending_steps_x) > 0 or abs(self.pending_steps_y) > 0
+            ):
+                # Max steps hardware can physically traverse in this frame window
+                step_limit_dt = self.max_steps_per_sec * dt
+
+                # Bleed off executed X steps
+                exec_x = math.copysign(
+                    min(abs(self.pending_steps_x), step_limit_dt), self.pending_steps_x
+                )
+                self.pending_steps_x -= exec_x
+
+                # Bleed off executed Y steps
+                exec_y = math.copysign(
+                    min(abs(self.pending_steps_y), step_limit_dt), self.pending_steps_y
+                )
+                self.pending_steps_y -= exec_y
+
+                # Convert executed steps directly to pixel displacements
+                shift_px_x = exec_x * self.px_per_step_x
+                shift_px_y = exec_y * self.px_per_step_y
+
+                # Shift Kalman state
+                self.kalman.x[0, 0] -= shift_px_x
+                self.kalman.x[1, 0] += shift_px_y
 
             self.kalman.predict(dt)
 
@@ -157,7 +192,12 @@ class EstimationWorker(QThread):
 
                 # Send to hardware
                 if self.state.is_tracking_enabled():
-                    self.serial.send_target(steps_x, steps_y)
+                    if steps_x != 0 or steps_y != 0:
+                        self.serial.send_target(steps_x, steps_y)
+
+                        # Stack newly commanded steps into the temporal buffer
+                        self.pending_steps_x += steps_x
+                        self.pending_steps_y += steps_y
             else:
                 self.pd_x.reset()
                 self.pd_y.reset()
@@ -194,11 +234,12 @@ class EstimationWorker(QThread):
                 "raw_x": float(raw_x) if raw_x is not None else filt_x,
                 "filt_x": filt_x,
                 "future_x": float(future_x),
-                "raw_y": float(raw_y) if raw_y is not None else filt_x,
+                "raw_y": float(raw_y) if raw_y is not None else filt_y,
                 "filt_y": filt_y,
                 "future_y": float(future_y),
                 "latency": latency_ms,
                 "error": spatial_err,
+                "gesture": gesture,
             }
 
             self.frame_ready.emit(frame)

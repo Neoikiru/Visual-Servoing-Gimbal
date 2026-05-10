@@ -20,7 +20,12 @@ class ConfigManager:
                 "kp_y": 1.0,
                 "kd_y": 1.0,
             },
-            "hardware": {"steps_per_pixel_x": 0.45, "steps_per_pixel_y": 0.45},
+            "hardware": {
+                "steps_per_pixel_x": 0.45,
+                "steps_per_pixel_y": 0.45,
+                "pixels_per_step_x": 0.45,
+                "pixels_per_step_y": 0.45,
+            },
         }
 
     def load(self):
