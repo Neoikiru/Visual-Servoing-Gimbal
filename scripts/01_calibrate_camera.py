@@ -14,6 +14,7 @@ import cv2
 import numpy as np
 
 
+# pylint: disable=too-many-locals,no-member
 def calibrate_camera(
     board_size: Tuple[int, int] = (9, 6),
     frame_wait: float = 1.0,
@@ -37,8 +38,9 @@ def calibrate_camera(
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
     # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
-    obj_p = np.zeros((board_size[0] * board_size[1], 3), np.float32)
-    obj_p[:, :2] = np.mgrid[0 : board_size[0], 0 : board_size[1]].T.reshape(
+    width, height = board_size[0], board_size[1]
+    obj_p = np.zeros((width * height, 3), np.float32)
+    obj_p[:, 0:2] = np.mgrid[0:width, 0:height].T.reshape(
         -1, 2
     )  # pylint: disable=no-member
 
@@ -132,7 +134,7 @@ def save_calibration(mtx: np.ndarray, dist: np.ndarray) -> None:
     }
 
     out_file = output_dir / "camera_intrinsics.json"
-    with open(out_file, "w") as f:
+    with open(out_file, "w", encoding="utf-8") as f:
         json.dump(calib_data, f, indent=4)
 
     print(f"Calibration done! Data saved to {out_file}")

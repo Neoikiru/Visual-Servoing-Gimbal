@@ -1,3 +1,8 @@
+"""
+Logging Utility
+Provides a standardized logger configuration for the application.
+"""
+
 import logging
 import sys
 from pathlib import Path
@@ -9,8 +14,11 @@ def setup_logger(
     name: str = "Tracker", log_level: int = logging.INFO
 ) -> logging.Logger:
     """
-    Sets up a logger. Outputs to both the console and a file.
-    If logger already exists, it updated the log level.
+    Sets up a logger with both console and file handlers.
+
+    :param name: The name of the logger.
+    :param log_level: The logging level (e.g., logging.INFO, logging.DEBUG).
+    :return: A configured logging.Logger instance.
     """
     logger = logging.getLogger(name)
 

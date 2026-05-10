@@ -1,8 +1,13 @@
+"""
+Worker thread for camera frame grabbing and distribution.
+"""
+
 import logging
 import time
+from typing import Optional
 
 import cv2
-from PySide6.QtCore import QThread, Signal
+from PySide6.QtCore import QThread, Signal  # pylint: disable=no-name-in-module
 
 from src.core.state import SystemState
 from src.perception.camera import Camera
@@ -10,14 +15,19 @@ from src.perception.camera import Camera
 logger = logging.getLogger("Tracker")
 
 
-class CameraWorker(QThread):
+class CameraWorker(QThread):  # pylint: disable=too-few-public-methods
+    """
+    Thread responsible for reading frames from a camera or video file
+    and updating the shared SystemState.
+    """
+
     video_finished = Signal()
 
     def __init__(
         self,
         state: SystemState,
         camera_id: int = 4,
-        video_path: Optional[str] = None,  # noqa: F821
+        video_path: Optional[str] = None,
     ):
         super().__init__()
         self.state = state
@@ -26,14 +36,15 @@ class CameraWorker(QThread):
         self.rewind_requested = False
 
     def run(self):
+        """Main execution loop for frame grabbing."""
         if self.video_path:
             logger.info(
-                f"Camera Thread Started in [VIDEO MODE] playing: {self.video_path}"
+                "Camera Thread Started in [VIDEO MODE] playing: %s", self.video_path
             )
             source = self.video_path
         else:
             logger.info(
-                f"Camera Thread Started in [LIVE MODE] on Camera ID: {self.camera_id}"
+                "Camera Thread Started in [LIVE MODE] on Camera ID: %s", self.camera_id
             )
             source = self.camera_id
 

@@ -1,10 +1,14 @@
+"""
+Worker thread for state estimation and control loop processing.
+"""
+
 import logging
 import math
 import time
 
 import cv2
 import numpy as np
-from PySide6.QtCore import QThread, Signal
+from PySide6.QtCore import QThread, Signal  # pylint: disable=no-name-in-module
 
 from src.control.pid import PDController
 from src.control.serial_link import SerialLink
@@ -14,12 +18,19 @@ from src.estimation.kalman import KalmanFilter2D
 logger = logging.getLogger("Tracker")
 
 
-class EstimationWorker(QThread):
+# @generated [partially] Gemini 3.1 Pro: Ego-Motion fix, help with Kalman Filter Math.
+class EstimationWorker(QThread):  # pylint: disable=too-many-instance-attributes
+    """
+    Thread that performs Kalman filtering for state estimation and PID control
+    for hardware target tracking.
+    """
+
     # Signals for UI
     frame_ready = Signal(np.ndarray)
     telemetry_ready = Signal(dict)
 
     def __init__(self, state: SystemState, args):
+        """Initializes the estimation worker with system state and CLI arguments."""
         super().__init__()
         self.state = state
 
@@ -47,7 +58,9 @@ class EstimationWorker(QThread):
         )
         self.serial.connect()
 
+    # pylint: disable=too-many-locals,too-many-statements,too-many-branches
     def run(self):
+        """Main execution loop for estimation and control."""
         logger.info("Estimation Thread Started.")
 
         while self.state.check_running():
@@ -74,7 +87,7 @@ class EstimationWorker(QThread):
 
             raw_x, raw_y, gesture = self.state.get_detection()
             if time.time() % 1.0 < 0.01:
-                logger.debug(f"raw_x: {raw_x}, raw_y: {raw_y}, gesture: {gesture}")
+                logger.debug("raw_x: %s, raw_y: %s, gesture: %s", raw_x, raw_y, gesture)
 
             # Tuning Parameters
             horizon, q_accel, r_noise = self.state.get_tuning()

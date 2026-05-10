@@ -1,14 +1,30 @@
+"""
+UI widget for displaying real-time telemetry plots.
+"""
+
 import collections
 
 import numpy as np
 import pyqtgraph as pg
-from PySide6.QtCore import Qt, Slot
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt, Slot  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
+    QHBoxLayout,
+    QLabel,
+    QVBoxLayout,
+    QWidget,
+)
 
 
-# @generated [partially] Gemini 3.1 Pro: Generated formal graph, later modified by me.
-class TelemetryPlotWidget(QWidget):
+# @generated [partially] Gemini 3.1 Pro: Generated full original plotter widget,
+#   later modified by me.
+class TelemetryPlotWidget(QWidget):  # pylint: disable=too-many-instance-attributes
+    """
+    Widget that uses pyqtgraph to render live telemetry data such as:
+        position tracking (X), latency (ms), and spatial error (pixels).
+    """
+
     def __init__(self, max_points: int = 100):
+        """Initializes the plot widget with layout and data buffers."""
         super().__init__()
         self.max_points = max_points
 
@@ -47,6 +63,7 @@ class TelemetryPlotWidget(QWidget):
         self.p_traj.setLabel("bottom", "Time (Frames)")
         self.p_traj.addLegend()
 
+        # pylint: disable=no-member
         self.line_raw = self.p_traj.plot(
             name="Raw",
             pen=pg.mkPen(color=(0, 0, 255), width=2, style=pg.QtCore.Qt.DashLine),
@@ -85,9 +102,7 @@ class TelemetryPlotWidget(QWidget):
 
     @Slot(dict)
     def update_plots(self, data: dict):
-        """Receives the telemetry dictionary from the background worker
-        and updates lines.
-        """
+        """Receives the telemetry dictionary and updates plot lines."""
         self.frame_count += 1
         self.time_data.append(self.frame_count)
 

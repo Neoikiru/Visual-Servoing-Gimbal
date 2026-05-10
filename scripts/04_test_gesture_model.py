@@ -3,6 +3,7 @@ Tool: Gesture Inference Test
 Loads the ONNX model and MediaPipe to classify gestures live from the webcam.
 """
 
+# pylint: disable=duplicate-code
 import json
 from pathlib import Path
 from typing import Dict
@@ -41,7 +42,14 @@ HAND_CONNECTIONS = [
 
 
 # @generated [partially] Gemini 3.1 Pro: ONNX model usage.
+# pylint: disable=too-many-locals,too-many-statements,duplicate-code
 def test_live_inference(camera_id: int = 0) -> None:
+    """
+    Runs live inference using the trained ONNX model and MediaPipe.
+
+    :param camera_id: The OpenCV camera index.
+    """
+    # pylint: disable=duplicate-code
     # paths
     models_dir = Path("data/models")
     onnx_path = models_dir / "gesture_classifier.onnx"
@@ -52,7 +60,7 @@ def test_live_inference(camera_id: int = 0) -> None:
         raise FileNotFoundError("Model files missing.")
 
     # Label Mapping
-    with open(mapping_path, "r") as f:
+    with open(mapping_path, "r", encoding="utf-8") as f:
         # convert JSON keys back to integers
         label_mapping: Dict[int, str] = {int(k): v for k, v in json.load(f).items()}
 

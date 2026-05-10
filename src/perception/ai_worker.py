@@ -1,3 +1,7 @@
+"""
+Worker thread for AI hand landmark detection and gesture recognition.
+"""
+
 import json
 import logging
 import time
@@ -10,17 +14,28 @@ import numpy as np
 import onnxruntime as ort
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
-from PySide6.QtCore import QThread
+from PySide6.QtCore import QThread  # pylint: disable=no-name-in-module
 
 from src.core.state import SystemState
 
 logger = logging.getLogger("Tracker")
 
 
-class AIWorker(QThread):
+# @generated [partially] Gemini 3.1 Pro: Added comments, help with ONNX usage.
+class AIWorker(QThread):  # pylint: disable=too-few-public-methods
+    """
+    Thread that uses MediaPipe and ONNX to detect hand landmarks
+        and recognize gestures.
+    """
+
     def __init__(self, state: SystemState):
+        """Initializes the AI worker with shared system state."""
         super().__init__()
         self.state = state
+        self.label_mapping = {}
+        self.ort_session = None
+        self.onnx_input_name = None
+        self.detector = None
         self._setup_ai()
 
     def _setup_ai(self):
@@ -28,7 +43,7 @@ class AIWorker(QThread):
         models_dir = Path("data/models")
 
         # Load Label Mapping
-        with open(models_dir / "label_mapping.json", "r") as f:
+        with open(models_dir / "label_mapping.json", "r", encoding="utf-8") as f:
             self.label_mapping: Dict[int, str] = {
                 int(k): v for k, v in json.load(f).items()
             }
@@ -40,6 +55,7 @@ class AIWorker(QThread):
         self.onnx_input_name = self.ort_session.get_inputs()[0].name
 
         # Load MediaPipe
+        # pylint: disable=duplicate-code
         base_options = python.BaseOptions(
             model_asset_path=str(models_dir / "hand_landmarker.task")
         )
@@ -52,7 +68,9 @@ class AIWorker(QThread):
         )
         self.detector = vision.HandLandmarker.create_from_options(options)
 
+    # pylint: disable=too-many-locals
     def run(self):
+        """Main execution loop for hand detection."""
         logger.info("AI Thread Started.")
 
         while self.state.check_running():

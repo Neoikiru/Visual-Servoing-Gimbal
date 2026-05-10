@@ -18,14 +18,19 @@ from sklearn.preprocessing import LabelEncoder
 
 
 def load_dataset(csv_path: Path) -> Tuple[np.ndarray, np.ndarray, List[str]]:
-    """Reads the CSV dataset and splits it into features and labels."""
+    """
+    Reads the CSV dataset and splits it into features and labels.
+
+    :param csv_path: Path to the raw gestures CSV file.
+    :return: A tuple of (features, labels, feature_names).
+    """
     if not csv_path.exists():
         raise FileNotFoundError(f"Dataset not found at {csv_path}.")
 
     X: List[List[float]] = []
     y_raw: List[str] = []
 
-    with open(csv_path, "r") as f:
+    with open(csv_path, "r", encoding="utf-8") as f:
         reader = csv.reader(f)
         header = next(reader)  # Skip header
 
@@ -40,7 +45,9 @@ def load_dataset(csv_path: Path) -> Tuple[np.ndarray, np.ndarray, List[str]]:
 
 
 # @generated [partially] Gemini 3.1 Pro: Suggestion on using ONXN & conversion to ONNX.
+# pylint: disable=too-many-locals
 def train_and_export() -> None:
+    """Trains a Random Forest classifier and exports it to ONNX format."""
     # paths
     dataset_path = Path("data/datasets/raw_gestures.csv")
     models_dir = Path("data/models")
@@ -62,7 +69,7 @@ def train_and_export() -> None:
     label_mapping: Dict[int, str] = {
         int(index): label for index, label in enumerate(le.classes_)
     }
-    with open(mapping_path, "w") as f:
+    with open(mapping_path, "w", encoding="utf-8") as f:
         json.dump(label_mapping, f, indent=4)
     print(f"Label mapping saved: {label_mapping}")
 

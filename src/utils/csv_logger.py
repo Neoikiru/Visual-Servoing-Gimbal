@@ -1,3 +1,9 @@
+# @generated [partially] Gemini 3.1 Pro: comments and string refactoring.
+"""
+CSV Telemetry Logger
+Logs system telemetry and performance metrics to a CSV file.
+"""
+
 import csv
 import logging
 import time
@@ -6,8 +12,17 @@ from pathlib import Path
 logger = logging.getLogger("Tracker")
 
 
+# @generated [partially] Gemini 3.1 Pro: Added comments and docstrings.
 class CSVLogger:
+    """Handles buffered logging of telemetry data to CSV files."""
+
     def __init__(self, log_dir="logs", disabled=False):
+        """
+        Initializes the CSVLogger.
+
+        :param log_dir: Directory where log files will be saved.
+        :param disabled: If True, logging operations are ignored.
+        """
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(exist_ok=True)
         self.buffer = []
@@ -37,7 +52,11 @@ class CSVLogger:
         logger.info("CSV Recording started.")
 
     def add_data(self, data: dict):
-        """Appends a row to the buffer if recording is active."""
+        """
+        Appends a row to the buffer if recording is active.
+
+        :param data: Dictionary containing telemetry values.
+        """
         if not self.is_recording or self.disabled:
             return
 
@@ -70,12 +89,14 @@ class CSVLogger:
         filename = self.log_dir / f"run_{time.strftime('%Y%m%d_%H%M%S')}.csv"
 
         try:
-            with open(filename, "w", newline="") as f:
+            with open(filename, "w", newline="", encoding="utf-8") as f:
                 writer = csv.DictWriter(f, fieldnames=self.headers)
                 writer.writeheader()
                 writer.writerows(self.buffer)
-            logger.info(f"Successfully saved {len(self.buffer)} frames to {filename}")
-        except Exception as e:
-            logger.error(f"Failed to save CSV: {e}")
+            logger.info(
+                "Successfully saved %d frames to %s", len(self.buffer), filename
+            )
+        except OSError as e:
+            logger.error("Failed to save CSV: %s", e)
 
         self.buffer.clear()

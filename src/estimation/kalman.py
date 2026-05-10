@@ -17,9 +17,14 @@ logger = logging.getLogger("Tracker")
 
 
 # @generated [partially] Gemini 3.1 Pro: Suggested using mahalanobis distance
-#   to filter out the outliers and a lot of help with debugging...
-class KalmanFilter2D:
+#   to filter out the outliers and a lot of help with debugging and refactoring...
+class KalmanFilter2D:  # pylint: disable=too-many-instance-attributes
+    """
+    Implements a constant-acceleration 2D Kalman Filter for smooth target tracking.
+    """
+
     def __init__(self):
+        """Initializes matrices and state for the Kalman Filter."""
         # State: [x, y, vx, vy, ax, ay]
         self.x = np.zeros((6, 1), dtype=np.float32)
 
@@ -66,7 +71,7 @@ class KalmanFilter2D:
         self.F[2, 4], self.F[3, 5] = dt, dt  # Velocity += Accel * dt
 
     def predict(self, dt: float) -> Tuple[float, float]:
-        """prediction step (Adapted from FilterPy)."""
+        """Performs the prediction step based on elapsed time dt."""
         self._update_F(dt)
 
         # x = Fx
@@ -78,7 +83,7 @@ class KalmanFilter2D:
         return float(self.x[0, 0]), float(self.x[1, 0])
 
     def update(self, measurement: Tuple[float, float]) -> bool:
-        """Add a new measurement to the Kalman filter."""
+        """Add a new measurement to the Kalman filter and update state."""
         z = np.array([[measurement[0]], [measurement[1]]], dtype=np.float32)
 
         # Initialization
@@ -86,7 +91,7 @@ class KalmanFilter2D:
             self.x[0, 0] = z[0, 0]
             self.x[1, 0] = z[1, 0]
             self.initialized = True
-            logger.info(f"Kalman Filter Initialized at ({z[0, 0]:.0f}, {z[1, 0]:.0f})")
+            logger.info("Kalman Filter Initialized at (%0.f, %0.f)", z[0, 0], z[1, 0])
             return True
 
         # y = z - Hx
@@ -114,8 +119,10 @@ class KalmanFilter2D:
         if mahalanobis_sq > dynamic_gate_limit and pixel_dist > absolute_pixel_limit:
             self.consecutive_gates += 1
             logger.debug(
-                f"Gated: Mahal {mahalanobis_sq:.1f}, "
-                f"Dist {pixel_dist:.1f}px (Streak: {self.consecutive_gates})"
+                "Gated: Mahal %.1f, Dist %.1fpx (Streak: %s)",
+                mahalanobis_sq,
+                pixel_dist,
+                self.consecutive_gates,
             )
 
             # LOSS OF TRACK RESET

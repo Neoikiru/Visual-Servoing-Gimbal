@@ -1,3 +1,7 @@
+"""
+Shared system state management for thread-safe data exchange.
+"""
+
 import threading
 from typing import Optional, Tuple
 
@@ -6,10 +10,11 @@ import numpy as np
 from src.utils.config import ConfigManager
 
 
-class SystemState:
+class SystemState:  # pylint: disable=too-many-instance-attributes
     """Thread-safe shared memory for the tracking pipeline."""
 
     def __init__(self):
+        """Initializes the system state with default values and loaded config."""
         self._lock = threading.Lock()
         # Main
         self.request_reset: bool = False
@@ -46,45 +51,55 @@ class SystemState:
         self.pixels_per_step_y: float = cfg["hardware"]["pixels_per_step_y"]
 
     def get_hardware_ratios(self) -> Tuple[float, float]:
+        """Returns the steps per pixel ratios for X and Y."""
         with self._lock:
             return self.steps_per_pixel_x, self.steps_per_pixel_y
 
-    def get_feedforward_ratios(self):
+    def get_feedforward_ratios(self) -> Tuple[float, float]:
+        """Returns the pixels per step ratios for X and Y."""
         with self._lock:
             return self.pixels_per_step_x, self.pixels_per_step_y
 
     def update_pid(self, kp_x: float, kd_x: float, kp_y: float, kd_y: float):
+        """Updates the PID gains."""
         with self._lock:
             self.kp_x, self.kd_x = kp_x, kd_x
             self.kp_y, self.kd_y = kp_y, kd_y
 
-    def get_pid(self) -> tuple[float, float, float, float]:
+    def get_pid(self) -> Tuple[float, float, float, float]:
+        """Returns the current PID gains."""
         with self._lock:
             return self.kp_x, self.kd_x, self.kp_y, self.kd_y
 
     def set_paused(self, paused: bool):
+        """Sets the system pause state."""
         with self._lock:
             self._is_paused = paused
 
     def is_paused(self) -> bool:
+        """Returns True if the system is paused."""
         with self._lock:
             return self._is_paused
 
     def set_tracking(self, enabled: bool):
+        """Enables or disables hardware tracking."""
         with self._lock:
             self._tracking_enabled = enabled
 
     def is_tracking_enabled(self) -> bool:
+        """Returns True if hardware tracking is enabled."""
         with self._lock:
             return self._tracking_enabled
 
     # Frame Methods
     def set_frame(self, frame: np.ndarray, capture_time: float):
+        """Sets the current frame and its capture timestamp."""
         with self._lock:
             self._current_frame = frame.copy()
             self._frame_capture_time = capture_time
 
-    def get_frame(self) -> Tuple(Optional[np.ndarray], float):
+    def get_frame(self) -> Tuple[Optional[np.ndarray], float]:
+        """Returns the latest frame and its capture timestamp."""
         with self._lock:
             return (
                 self._current_frame.copy() if self._current_frame is not None else None
@@ -92,23 +107,27 @@ class SystemState:
 
     # AI Methods
     def set_detection(self, x: Optional[float], y: Optional[float], gesture: str):
+        """Sets the latest hand detection results."""
         with self._lock:
             self._raw_x = x
             self._raw_y = y
             self._gesture = gesture
 
     def get_detection(self) -> Tuple[Optional[float], Optional[float], str]:
+        """Returns the latest hand detection results."""
         with self._lock:
             return self._raw_x, self._raw_y, self._gesture
 
     # Tuning
     def update_tuning(self, horizon: float, q_accel: float, r_noise: float):
+        """Updates Kalman Filter tuning parameters."""
         with self._lock:
             self.horizon = horizon
             self.q_accel = q_accel
             self.r_noise = r_noise
 
     def get_tuning(self) -> Tuple[float, float, float]:
+        """Returns the current Kalman Filter tuning parameters."""
         with self._lock:
             return self.horizon, self.q_accel, self.r_noise
 
@@ -130,9 +149,11 @@ class SystemState:
             self.config_mgr.save()
 
     def stop(self):
+        """Signals the system to stop running."""
         with self._lock:
             self.is_running = False
 
     def check_running(self) -> bool:
+        """Returns True if the system should continue running."""
         with self._lock:
             return self.is_running

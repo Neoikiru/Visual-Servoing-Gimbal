@@ -1,9 +1,14 @@
+"""
+Main entry point for the Tracker application.
+Provides a dashboard for monitoring and controlling the tracking system.
+"""
+
 import argparse
 import logging
 import sys
 
-from PySide6.QtCore import Qt, Slot
-from PySide6.QtWidgets import (
+from PySide6.QtCore import Qt, Slot  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
     QApplication,
     QGridLayout,
     QGroupBox,
@@ -26,13 +31,23 @@ from src.ui.video_widget import VideoWidget
 from src.utils.csv_logger import CSVLogger
 from src.utils.logger import setup_logger
 
+logger = logging.getLogger("Tracker")
 
-# @generated [partially] Gemini 3.1 Pro: QtApplication Structure and signals hints.
-#   CSS style, layout and buttons are generated.
-class TrackerDashboard(QMainWindow):
-    def __init__(self, args):
+
+# @generated [partially] Gemini 3.1 Pro: QtApplication Structure and signals,
+#   CSS style, layout and buttons are generated, as well as comments.
+class TrackerDashboard(
+    QMainWindow
+):  # pylint: disable=too-many-instance-attributes,too-few-public-methods
+    """
+    Main dashboard window containing video feed, control tabs, and telemetry plots.
+    """
+
+    # pylint: disable=too-many-locals,too-many-statements
+    def __init__(self, cli_args):
+        """Initializes the dashboard UI and starts worker threads."""
         super().__init__()
-        self.args = args
+        self.args = cli_args
         self.setWindowTitle("Tracker")
         self.resize(1400, 900)
 
@@ -275,6 +290,7 @@ class TrackerDashboard(QMainWindow):
         logger.info("Saved config to disk.")
 
     def _on_slider_changed(self):
+        """Updates internal state when UI sliders are moved."""
         h = self.sld_horiz.value() / 1000.0
         q = float(self.sld_q.value())
         r = float(self.sld_r.value())
@@ -301,20 +317,24 @@ class TrackerDashboard(QMainWindow):
         self.state.update_pid(kp_x, kd_x, kp_y, kd_y)
 
     def _move_gimbal(self, steps_x: int, steps_y: int):
+        """Sends manual jog commands to the hardware."""
         if self.args.video or self.btn_primary_action.isChecked():
             return
         self.estimation_thread.serial.send_target(steps_x, steps_y)
-        logger.info(f"Manual Jog: X={steps_x}, Y={steps_y}")
+        logger.info("Manual Jog: X=%s, Y=%s", steps_x, steps_y)
 
     def _on_set_home_clicked(self):
+        """Defines current position as (0,0)."""
         self.estimation_thread.serial.set_current_as_home()
 
     def _on_go_home_clicked(self):
+        """Commands hardware to return to (0,0)."""
         if self.args.video or self.btn_primary_action.isChecked():
             return
         self.estimation_thread.serial.go_home_absolute()
 
     def _on_estop_clicked(self):
+        """Toggles hardware emergency stop state."""
         ser = self.estimation_thread.serial
 
         if not ser.is_estopped:
@@ -345,6 +365,7 @@ class TrackerDashboard(QMainWindow):
     # SLOTS (Callbacks for signals)
     @Slot()
     def _on_video_finished(self):
+        """Handles video end signal from camera worker."""
         logger.info("Recognized video end.")
         self.csv_logger.save()
         self.btn_primary_action.setText("🔄 Reset And Run Test")
@@ -397,6 +418,7 @@ class TrackerDashboard(QMainWindow):
         self.lbl_inspector.setText(f"📍 Inspector Selected: X={native_x}, Y={native_y}")
 
     def _setup_threads(self):
+        """Initializes and starts all background worker threads."""
         # Create  Workers
         self.camera_thread = CameraWorker(
             self.state, camera_id=self.args.camera, video_path=self.args.video
@@ -433,7 +455,8 @@ class TrackerDashboard(QMainWindow):
         event.accept()
 
 
-if __name__ == "__main__":
+def main():
+    """Main application launcher."""
     parser = argparse.ArgumentParser(description="Tracking System")
     parser.add_argument(
         "--camera", type=int, default=4, help="Camera device index (default: 4)"
@@ -465,7 +488,7 @@ if __name__ == "__main__":
         args.debug = True
 
     log_level = logging.DEBUG if args.debug else logging.INFO
-    logger = setup_logger(log_level=log_level)
+    setup_logger(log_level=log_level)
 
     logger.info("Initializing Application...")
     if args.debug:
@@ -481,5 +504,9 @@ if __name__ == "__main__":
     window.show()
 
     exit_code = app.exec()
-    logger.info(f"Application terminated with exit code {exit_code}.")
+    logger.info("Application terminated with exit code %s.", exit_code)
     sys.exit(exit_code)
+
+
+if __name__ == "__main__":
+    main()

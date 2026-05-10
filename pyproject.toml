@@ -24,11 +24,14 @@ max-line-length = 88
 [tool.pylint.messages_control]
 disable = [
     "C0103", # Allow math variables (F, H, P) and numbered script files
-    "R0914", # Allow scripts to have many local variables
-    "R0915", # Allow scripts to have many statements
-    "W1514", # Ignore missing 'utf-8' encoding flags on open()
-    "R0801", # Allow ML scripts to share extraction logic
-    "C0115", # Ignore missing class docstrings for now
-    "C0116", # Ignore missing function docstrings in offline scripts
+    #    "R0914", # Allow scripts to have many local variables
+    #    "R0915", # Allow scripts to have many statements
+    #    "W1514", # Ignore missing 'utf-8' encoding flags on open()
+    #    "R0801", # Allow ML scripts to share extraction logic
+    #    "C0115", # Ignore missing class docstrings for now
+    #    "C0116", # Ignore missing function docstrings in offline scripts
     "C0301", # Let the 'black' formatter handle line lengths, ignore pylint's complaints
 ]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

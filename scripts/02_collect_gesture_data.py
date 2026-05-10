@@ -5,6 +5,7 @@ Reference documentation:
     https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker/python
 """
 
+# pylint: disable=duplicate-code
 import argparse
 import csv
 import urllib.request
@@ -50,7 +51,16 @@ def download_model(model_path: Path) -> None:
         print("Download complete")
 
 
+# pylint: disable=too-many-locals,too-many-statements,duplicate-code
 def collect_data(label: str, num_samples: int, camera_id: int = 0) -> None:
+    """
+    Captures hand landmarks from the camera and saves them to a CSV file.
+
+    :param label: The name of the gesture being recorded.
+    :param num_samples: Number of samples to collect.
+    :param camera_id: The OpenCV camera index.
+    """
+    # pylint: disable=duplicate-code
     # Setup Dirs
     output_dir = Path("data/datasets")
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -90,7 +100,7 @@ def collect_data(label: str, num_samples: int, camera_id: int = 0) -> None:
 
     recording = False
 
-    with open(csv_file, mode="a", newline="") as f:
+    with open(csv_file, mode="a", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         if write_header:
             writer.writerow(header)

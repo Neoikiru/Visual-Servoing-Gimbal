@@ -1,20 +1,30 @@
+"""
+UI widget for displaying OpenCV video frames in a Qt label.
+"""
+
 import logging
 
 import cv2
 import numpy as np
-from PySide6.QtCore import Qt, Signal, Slot
-from PySide6.QtGui import QImage, QPixmap
-from PySide6.QtWidgets import QLabel
+from PySide6.QtCore import Qt, Signal, Slot  # pylint: disable=no-name-in-module
+from PySide6.QtGui import QImage, QPixmap  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import QLabel  # pylint: disable=no-name-in-module
 
 logger = logging.getLogger("Tracker")
 
 
 # @generated [all] Gemini 3.1 Pro:
 #   Prompt: Write a video widget this PySide6 app to display OpenCV frames...
+#   Prompt: Create a method to capture mouse clicks and log them.
 class VideoWidget(QLabel):
+    """
+    Custom QLabel for rendering OpenCV frames and capturing mouse interaction.
+    """
+
     pixel_clicked = Signal(int, int)
 
     def __init__(self):
+        """Initializes the video widget with center alignment and default size."""
         super().__init__()
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setMinimumSize(640, 480)
@@ -28,7 +38,7 @@ class VideoWidget(QLabel):
     @Slot(np.ndarray)
     def update_frame(self, frame: np.ndarray):
         """
-        Receives an OpenCV frame ,converts it to a QPixmap, and displays it.
+        Receives an OpenCV frame, converts it to a QPixmap, and displays it.
         """
         # Convert BGR to RGB
         rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -76,7 +86,9 @@ class VideoWidget(QLabel):
             native_x = int(click_x * scale_x)
             native_y = int(click_y * scale_y)
 
-            logger.debug(f"Clicked UI -> Native Coordinate: ({native_x}, {native_y})")
+            logger.debug(
+                "Clicked UI -> Native Coordinate: (%s, %s)", native_x, native_y
+            )
             self.pixel_clicked.emit(native_x, native_y)
 
         super().mousePressEvent(event)

@@ -1,3 +1,8 @@
+"""
+Tool: Telemetry Analyzer
+Visualizes tracking performance from recorded CSV logs using matplotlib.
+"""
+
 import glob
 import os
 from pathlib import Path
@@ -7,6 +12,12 @@ import pandas as pd
 
 
 def find_latest_csv(log_dir="logs"):
+    """
+    Finds the most recently created CSV file in the specified directory.
+
+    :param log_dir: Directory to search for CSV files.
+    :return: Path to the latest CSV file.
+    """
     list_of_files = glob.glob(f"{log_dir}/*.csv")
     if not list_of_files:
         raise FileNotFoundError(f"No CSV files found in {log_dir}/")
@@ -15,6 +26,11 @@ def find_latest_csv(log_dir="logs"):
 
 
 def analyze_telemetry(csv_path=None):
+    """
+    Loads telemetry data from a CSV and generates analysis plots.
+
+    :param csv_path: Path to the CSV file. If None, the latest file is used.
+    """
     if csv_path is None:
         csv_path = find_latest_csv()
 

@@ -1,3 +1,7 @@
+"""
+Serial communication link for hardware control.
+"""
+
 import logging
 import time
 
@@ -6,13 +10,20 @@ import serial
 logger = logging.getLogger("Tracker")
 
 
-class SerialLink:
+# @generated [partially] Gemini 3.1 Pro: Added comments and docstrings.
+class SerialLink:  # pylint: disable=too-many-instance-attributes
+    """
+    Manages the serial connection to the hardware, handling command transmission
+    and safety limits.
+    """
+
     def __init__(
         self,
         port: str = "/dev/ttyUSB0",
         baudrate: int = 115200,
         debug_mode: bool = False,
     ):
+        """Initializes the serial link parameters."""
         self.port = port
         self.baudrate = baudrate
         self.debug_mode = debug_mode
@@ -25,6 +36,7 @@ class SerialLink:
         self.max_steps_limit = 1000  # For my own safety (remove in prod)
 
     def connect(self) -> bool:
+        """Establishes a connection to the serial port."""
         if self.debug_mode:
             logger.info("SERIAL DEBUG MODE: Hardware connection bypassed.")
             self.is_connected = True
@@ -34,19 +46,20 @@ class SerialLink:
             self.ser = serial.Serial(self.port, self.baudrate, timeout=0.05)
             time.sleep(2)
             logger.info(
-                f"Successfully connected to hardware on {self.port} "
-                f"at {self.baudrate} baud."
+                "Successfully connected to hardware on %s at %s baud.",
+                self.port,
+                self.baudrate,
             )
             self.is_connected = True
             return True
         except serial.SerialException as e:
-            logger.error(f"Failed to connect to {self.port}: {e}")
+            logger.error("Failed to connect to %s: %s", self.port, e)
             self.is_connected = False
 
             return False
 
     def send_target(self, x: int, y: int):
-        """Packs the steps into <X,Y> string payload."""
+        """Packs the steps into <X,Y> string payload and sends it."""
         if not self.is_connected or self.is_estopped:
             return
 
@@ -59,8 +72,10 @@ class SerialLink:
             or abs(predicted_y) > self.max_steps_limit
         ) and not self.debug_mode:
             logger.critical(
-                f"Requested ({predicted_x}, {predicted_y}) "
-                f"exceeds {self.max_steps_limit} steps."
+                "Requested (%s, %s) exceeds %s steps.",
+                predicted_x,
+                predicted_y,
+                self.max_steps_limit,
             )
             return
 
@@ -72,13 +87,13 @@ class SerialLink:
         if self.debug_mode:
             # Only print occasionally
             if time.time() % 1.0 < 0.01:
-                logger.debug(f"[MOCK SERIAL TX] {payload.strip()}")
+                logger.debug("[MOCK SERIAL TX] %s", payload.strip())
             return
 
         try:
             self.ser.write(payload.encode("utf-8"))
         except serial.SerialException as e:
-            logger.error(f"Serial write failed: {e}")
+            logger.error("Serial write failed: %s", e)
             self.is_connected = False
 
     def go_home_absolute(self):
@@ -97,7 +112,7 @@ class SerialLink:
         try:
             self.ser.write(b"<HOME>\n")
         except serial.SerialException as e:
-            logger.error(f"Serial write failed during homing: {e}")
+            logger.error("Serial write failed during homing: %s", e)
 
     def set_current_as_home(self):
         """Tells the hardware to define its current position as (0,0)."""
@@ -115,7 +130,7 @@ class SerialLink:
         try:
             self.ser.write(b"<ZERO>\n")
         except serial.SerialException as e:
-            logger.error(f"Serial write failed during zeroing: {e}")
+            logger.error("Serial write failed during zeroing: %s", e)
 
     def emergency_stop(self):
         """Halts microcontroller and stops the motors."""
@@ -138,6 +153,7 @@ class SerialLink:
             self.ser.write("<ARM>\n".encode("utf-8"))
 
     def close(self):
+        """Closes the serial connection safely."""
         if self.ser and self.ser.is_open:
             self.emergency_stop()
             self.ser.close()
