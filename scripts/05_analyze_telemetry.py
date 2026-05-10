@@ -25,6 +25,7 @@ def find_latest_csv(log_dir="logs"):
     return latest_file
 
 
+# pylint: disable=too-many-statements
 def analyze_telemetry(csv_path=None):
     """
     Loads telemetry data from a CSV and generates analysis plots.
@@ -97,11 +98,13 @@ def analyze_telemetry(csv_path=None):
     # Error
     ax4 = plt.subplot(2, 2, 4)
     ax4.plot(df["time_sec"], df["error_px"], color="magenta")
+
+    mean_err = df["error_px"].mean()
     ax4.axhline(
-        df["error_px"].mean(),
+        mean_err,
         color="white",
         linestyle="dashed",
-        label=f"Mean Error: {df['error_px'].mean():.1f} px",
+        label=f"Mean Error: {mean_err:.1f} px",
     )
     ax4.fill_between(df["time_sec"], df["error_px"], color="magenta", alpha=0.2)
     ax4.set_title("Prediction Error vs Real Raw Position")
@@ -109,6 +112,39 @@ def analyze_telemetry(csv_path=None):
     ax4.set_ylabel("Distance (Pixels)")
     ax4.legend()
     ax4.grid(color="#333333")
+
+    # Accuracy Stats
+    total = len(df)
+    acc_20 = len(df[df["error_px"] < 20]) / total * 100
+    acc_50 = len(df[df["error_px"] < 50]) / total * 100
+    acc_100 = len(df[df["error_px"] < 100]) / total * 100
+
+    stats_text = (
+        "--- Accuracy Metrics ---\n"
+        f"Mean Error: {mean_err:.1f} px\n"
+        f"Median Error: {df['error_px'].median():.1f} px\n"
+        f"Accuracy (<20px): {acc_20:.1f}%\n"
+        f"Accuracy (<50px): {acc_50:.1f}%\n"
+        f"Accuracy (<100px): {acc_100:.1f}%"
+    )
+
+    # Add text box to the plot
+    props = {
+        "boxstyle": "round",
+        "facecolor": "black",
+        "alpha": 0.5,
+        "edgecolor": "magenta",
+    }
+    ax4.text(
+        0.05,
+        0.95,
+        stats_text,
+        transform=ax4.transAxes,
+        fontsize=10,
+        verticalalignment="top",
+        bbox=props,
+        color="white",
+    )
 
     plt.tight_layout()
     plt.show()
