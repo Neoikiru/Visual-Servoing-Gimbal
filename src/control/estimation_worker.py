@@ -150,7 +150,7 @@ class EstimationWorker(QThread):
             steps_y = int(-pd_out_y * self.steps_per_pixel_y)
 
             # Send to hardware
-            if self.state.is_tracking_enabled() or self.serial.debug_mode:
+            if self.state.is_tracking_enabled():
                 self.serial.send_target(steps_x, steps_y)
 
             box_size = 40

@@ -188,6 +188,7 @@ class TrackerDashboard(QMainWindow):
         main_layout.addLayout(left_column, stretch=1)
         main_layout.addWidget(self.plot_widget, stretch=1)
 
+        # Connect sliders to callbacks
         for s in [
             self.sld_horiz,
             self.sld_q,
@@ -199,7 +200,20 @@ class TrackerDashboard(QMainWindow):
         ]:
             s.valueChanged.connect(self._on_slider_changed)
 
+        # Connect all buttons to callbacks
         self.btn_save_config.clicked.connect(self._on_save_config_clicked)
+
+        # Joystick
+        jog_step = 20
+        self.btn_jog_up.clicked.connect(lambda: self._move_gimbal(0, jog_step))
+        self.btn_jog_down.clicked.connect(lambda: self._move_gimbal(0, -jog_step))
+        self.btn_jog_left.clicked.connect(lambda: self._move_gimbal(-jog_step, 0))
+        self.btn_jog_right.clicked.connect(lambda: self._move_gimbal(jog_step, 0))
+
+        # Homing & Safety
+        self.btn_set_home.clicked.connect(self._on_set_home_clicked)
+        self.btn_go_home.clicked.connect(self._on_go_home_clicked)
+        self.btn_estop.clicked.connect(self._on_estop_clicked)
 
         # Start data recording
         if self.args.video:
@@ -208,6 +222,8 @@ class TrackerDashboard(QMainWindow):
         # Setup Threading
         self.threads = []
         self._setup_threads()
+
+    # Callbacks for GUI
 
     def _on_tracking_toggled(self, checked: bool):
         """Called when the 'Enable Tracking' button is toggled in Live Mode."""
@@ -220,6 +236,24 @@ class TrackerDashboard(QMainWindow):
             logger.info("Hardware Tracking Disabled.")
             self.csv_logger.save()
             self.btn_primary_action.setText("🎯 Enable Tracking")
+
+    def _on_reset_run_clicked(self):
+        """Test Cycle Reset"""
+        logger.info("Test Cycle Reset Initiated.")
+
+        # Lock UI
+        self.btn_primary_action.setText("▶ Playing...")
+        self.btn_primary_action.setEnabled(False)
+        self.btn_primary_action.setStyleSheet(
+            "background-color: #555555; color: white;"
+        )
+
+        self.plot_widget.clear_plots()
+        self.state.request_reset = True
+        self.state.set_paused(False)
+
+        self.csv_logger.start()
+        self.camera_thread.rewind_requested = True
 
     def _on_save_config_clicked(self):
         """Pull slider values and save to json"""
@@ -252,6 +286,52 @@ class TrackerDashboard(QMainWindow):
 
         self.state.update_pid(kp_x, kd_x, kp_y, kd_y)
 
+    def _move_gimbal(self, steps_x: int, steps_y: int):
+        if self.args.video or self.btn_primary_action.isChecked():
+            return
+        self.estimation_thread.serial.send_target(steps_x, steps_y)
+        logger.info(f"Manual Jog: X={steps_x}, Y={steps_y}")
+
+    def _on_set_home_clicked(self):
+        self.estimation_thread.serial.reset_home_position()
+
+    def _on_go_home_clicked(self):
+        """Calculates exact inverse steps to return to (0,0)."""
+        if self.args.video or self.btn_primary_action.isChecked():
+            return
+        ser = self.estimation_thread.serial
+        self._move_gimbal(-ser.steps_from_home_x, -ser.steps_from_home_y)
+        logger.info("Returning to home position.")
+
+    def _on_estop_clicked(self):
+        ser = self.estimation_thread.serial
+
+        if not ser.is_estopped:
+            # EMERGENCY STOP
+            ser.emergency_stop()
+
+            # Update UI
+            self.btn_estop.setText("⚠️ SYSTEM LOCKED - Click to Arm")
+            self.btn_estop.setStyleSheet(
+                "background-color: #FF8C00; color: black; "
+                "font-weight: bold; font-size: 16px; height: 35px;"
+            )
+
+            # Disable tracking safety toggle
+            if not self.args.video and self.btn_primary_action.isChecked():
+                self.btn_primary_action.setChecked(False)
+        else:
+            # ARM
+            ser.arm()
+
+            # Update UI
+            self.btn_estop.setText("🛑 E-STOP")
+            self.btn_estop.setStyleSheet(
+                "background-color: #CC0000; color: white; "
+                "font-weight: bold; font-size: 16px; height: 35px;"
+            )  # noqa: E501
+
+    # SLOTS (Callbacks for signals)
     @Slot()
     def _on_video_finished(self):
         logger.info("Recognized video end.")
@@ -261,24 +341,6 @@ class TrackerDashboard(QMainWindow):
         self.btn_primary_action.setStyleSheet(
             "background-color: #006400; color: white;"
         )
-
-    def _on_reset_run_clicked(self):
-        """Test Cycle Reset"""
-        logger.info("Test Cycle Reset Initiated.")
-
-        # Lock UI
-        self.btn_primary_action.setText("▶ Playing...")
-        self.btn_primary_action.setEnabled(False)
-        self.btn_primary_action.setStyleSheet(
-            "background-color: #555555; color: white;"
-        )
-
-        self.plot_widget.clear_plots()
-        self.state.request_reset = True
-        self.state.set_paused(False)
-
-        self.csv_logger.start()
-        self.camera_thread.rewind_requested = True
 
     @Slot(dict)
     def _on_telemetry_received(self, data: dict):
@@ -291,7 +353,6 @@ class TrackerDashboard(QMainWindow):
 
     def _setup_threads(self):
         # Create  Workers
-
         self.camera_thread = CameraWorker(
             self.state, camera_id=self.args.camera, video_path=self.args.video
         )
