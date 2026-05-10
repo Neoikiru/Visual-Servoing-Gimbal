@@ -1,15 +1,19 @@
 {
-    "kalman": {
-        "horizon": 0.1,
-        "q_accel": 50000.0,
-        "r_noise": 100.0
-    },
-    "pid": {
-        "kp": 1.0,
-        "kd": 0.1
-    },
-    "hardware": {
-        "steps_per_pixel_x": 0.45,
-        "steps_per_pixel_y": 0.45
-    }
+  "kalman": {
+    "horizon": 0.1,
+    "q_accel": 3977.0,
+    "r_noise": 33.0
+  },
+  "pid": {
+    "kp_x": 0.09,
+    "kd_x": 0.01,
+    "kp_y": 0.07,
+    "kd_y": 0.01
+  },
+  "hardware": {
+    "steps_per_pixel_x": 0.3521,
+    "steps_per_pixel_y": 0.3629,
+    "pixels_per_step_x": 2.8400,
+    "pixels_per_step_y": 2.7556
+  }
 }

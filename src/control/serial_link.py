@@ -81,6 +81,42 @@ class SerialLink:
             logger.error(f"Serial write failed: {e}")
             self.is_connected = False
 
+    def go_home_absolute(self):
+        """Commands the firmware return to (0,0)."""
+        if not self.is_connected or self.is_estopped:
+            return
+
+        logger.info("Executing homing sequence.")
+        self.steps_from_home_x = 0
+        self.steps_from_home_y = 0
+
+        if self.debug_mode:
+            logger.debug("[MOCK TX] <HOME>")
+            return
+
+        try:
+            self.ser.write(b"<HOME>\n")
+        except serial.SerialException as e:
+            logger.error(f"Serial write failed during homing: {e}")
+
+    def set_current_as_home(self):
+        """Tells the hardware to define its current position as (0,0)."""
+        if not self.is_connected or self.is_estopped:
+            return
+
+        logger.info("Setting current physical orientation as absolute home origin.")
+        self.steps_from_home_x = 0
+        self.steps_from_home_y = 0
+
+        if self.debug_mode:
+            logger.debug("[MOCK TX] <ZERO>")
+            return
+
+        try:
+            self.ser.write(b"<ZERO>\n")
+        except serial.SerialException as e:
+            logger.error(f"Serial write failed during zeroing: {e}")
+
     def emergency_stop(self):
         """Halts microcontroller and stops the motors."""
         self.is_estopped = True
@@ -100,11 +136,6 @@ class SerialLink:
             return
         if self.ser and self.ser.is_open:
             self.ser.write("<ARM>\n".encode("utf-8"))
-
-    def reset_home_position(self):
-        self.steps_from_home_x = 0
-        self.steps_from_home_y = 0
-        logger.info("Home position reset.")
 
     def close(self):
         if self.ser and self.ser.is_open:

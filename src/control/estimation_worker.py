@@ -137,21 +137,30 @@ class EstimationWorker(QThread):
                 1,
             )
 
-            # Get error
-            err_x = future_x - center_x
-            err_y = future_y - center_y
+            if raw_x is not None and raw_y is not None:
+                # Get error
+                err_x = future_x - center_x
+                err_y = future_y - center_y
 
-            # Get PID output
-            pd_out_x = self.pd_x.compute(err_x, current_time)
-            pd_out_y = self.pd_y.compute(err_y, current_time)
+                # Get PID output
+                pd_out_x = self.pd_x.compute(err_x, current_time)
+                pd_out_y = self.pd_y.compute(err_y, current_time)
 
-            # Convert pixels to steps
-            steps_x = int(pd_out_x * self.steps_per_pixel_x)
-            steps_y = int(-pd_out_y * self.steps_per_pixel_y)
+                # Convert pixels to steps
+                steps_x = int(pd_out_x * self.steps_per_pixel_x)
+                steps_y = int(-pd_out_y * self.steps_per_pixel_y)
 
-            # Send to hardware
-            if self.state.is_tracking_enabled():
-                self.serial.send_target(steps_x, steps_y)
+                if abs(err_x) < 30:
+                    steps_x = 0
+                if abs(err_y) < 30:
+                    steps_y = 0
+
+                # Send to hardware
+                if self.state.is_tracking_enabled():
+                    self.serial.send_target(steps_x, steps_y)
+            else:
+                self.pd_x.reset()
+                self.pd_y.reset()
 
             box_size = 40
             cv2.rectangle(

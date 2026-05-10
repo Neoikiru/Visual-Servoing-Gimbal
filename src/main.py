@@ -179,6 +179,15 @@ class TrackerDashboard(QMainWindow):
         self.tabs.addTab(tab_estimation, "🧮 Software Tuning")
         self.tabs.addTab(tab_hardware, "⚙️ Hardware / PID")
 
+        self.lbl_inspector = QLabel("📍 Inspector: Click video to inspect pixels")
+        self.lbl_inspector.setStyleSheet(
+            "color: #00FFFF; font-weight: bold; font-size: 14px;"
+        )
+
+        # Visual pixel inspector for calibration
+        left_column.addWidget(self.lbl_inspector)
+        self.video_widget.pixel_clicked.connect(self._on_video_pixel_clicked)
+
         left_column.addWidget(self.tabs, stretch=2)
 
         # Right column
@@ -293,15 +302,12 @@ class TrackerDashboard(QMainWindow):
         logger.info(f"Manual Jog: X={steps_x}, Y={steps_y}")
 
     def _on_set_home_clicked(self):
-        self.estimation_thread.serial.reset_home_position()
+        self.estimation_thread.serial.set_current_as_home()
 
     def _on_go_home_clicked(self):
-        """Calculates exact inverse steps to return to (0,0)."""
         if self.args.video or self.btn_primary_action.isChecked():
             return
-        ser = self.estimation_thread.serial
-        self._move_gimbal(-ser.steps_from_home_x, -ser.steps_from_home_y)
-        logger.info("Returning to home position.")
+        self.estimation_thread.serial.go_home_absolute()
 
     def _on_estop_clicked(self):
         ser = self.estimation_thread.serial
@@ -350,6 +356,11 @@ class TrackerDashboard(QMainWindow):
 
         # Feed the CSV Logger
         self.csv_logger.add_data(data)
+
+    @Slot(int, int)
+    def _on_video_pixel_clicked(self, native_x: int, native_y: int):
+        """Displays native coordinates on the UI when the video is clicked."""
+        self.lbl_inspector.setText(f"📍 Inspector Selected: X={native_x}, Y={native_y}")
 
     def _setup_threads(self):
         # Create  Workers
