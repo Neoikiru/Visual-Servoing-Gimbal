@@ -1,8 +1,8 @@
 {
     "kalman": {
-        "horizon": 0.09,
-        "q_accel": 5719.0,
-        "r_noise": 131.0
+        "horizon": 0.1,
+        "q_accel": 3600.0,
+        "r_noise": 100.0
     },
     "pid": {
         "kp_x": 0.09,

@@ -112,7 +112,7 @@ class KalmanFilter2D:  # pylint: disable=too-many-instance-attributes
         #   is from the mean of D (probability distribution)
         mahalanobis_sq = np.dot(np.dot(y.T, S_inv), y)[0, 0]
 
-        dynamic_gate_limit = 25.0  # mahalanobis distance threshold
+        dynamic_gate_limit = 100.0  # mahalanobis distance threshold
         absolute_pixel_limit = 100.0  # mix jerk in pixels to trigger
 
         # Outlier rejection
