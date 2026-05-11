@@ -19,7 +19,8 @@ from src.estimation.kalman import KalmanFilter2D
 logger = logging.getLogger("Tracker")
 
 
-# @generated [partially] Gemini 3.1 Pro: Ego-Motion fix, help with Kalman Filter Math.
+# @generated [partially] Gemini 3.1 Pro: Ego-Motion fix, help with Kalman Filter Math,
+#   FeedForward experiment.
 class EstimationWorker(QThread):  # pylint: disable=too-many-instance-attributes
     """
     Thread that performs Kalman filtering for state estimation and PID control
@@ -106,7 +107,7 @@ class EstimationWorker(QThread):  # pylint: disable=too-many-instance-attributes
             dt = current_time - self.last_time
             self.last_time = current_time
 
-            # FeedForward
+            # FeedForward (Gemini Generated, just an experiment. Disabled by default)
             if (
                 self.state.is_tracking_enabled()
                 and (abs(self.pending_steps_x) > 0 or abs(self.pending_steps_y) > 0)
