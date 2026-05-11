@@ -384,33 +384,34 @@ class TrackerDashboard(
         self.csv_logger.add_data(data)
 
         # Use gesture control
-        gesture = data.get("gesture", "None")
-        if gesture == "Closed":
-            self.consecutive_frames_open = 0
-            self.consecutive_frames_closed += 1
-            if (
-                self.state.is_tracking_enabled()
-                and self.consecutive_frames_closed >= self.required_frames
-            ):
+        if not self.args.no_gesture:
+            gesture = data.get("gesture", "None")
+            if gesture == "Closed":
                 self.consecutive_frames_open = 0
-                self.consecutive_frames_closed = 0
-                self.state.set_tracking(False)
-                self.btn_primary_action.setChecked(False)
+                self.consecutive_frames_closed += 1
+                if (
+                    self.state.is_tracking_enabled()
+                    and self.consecutive_frames_closed >= self.required_frames
+                ):
+                    self.consecutive_frames_open = 0
+                    self.consecutive_frames_closed = 0
+                    self.state.set_tracking(False)
+                    self.btn_primary_action.setChecked(False)
 
-        elif gesture == "Open":
-            self.consecutive_frames_open += 1
-            self.consecutive_frames_closed = 0
-            if (
-                not self.state.is_tracking_enabled()
-                and self.consecutive_frames_open >= self.required_frames
-            ):
+            elif gesture == "Open":
+                self.consecutive_frames_open += 1
+                self.consecutive_frames_closed = 0
+                if (
+                    not self.state.is_tracking_enabled()
+                    and self.consecutive_frames_open >= self.required_frames
+                ):
+                    self.consecutive_frames_open = 0
+                    self.consecutive_frames_closed = 0
+                    self.state.set_tracking(True)
+                    self.btn_primary_action.setChecked(True)
+            else:
                 self.consecutive_frames_open = 0
                 self.consecutive_frames_closed = 0
-                self.state.set_tracking(True)
-                self.btn_primary_action.setChecked(True)
-        else:
-            self.consecutive_frames_open = 0
-            self.consecutive_frames_closed = 0
 
     @Slot(int, int)
     def _on_video_pixel_clicked(self, native_x: int, native_y: int):
@@ -480,6 +481,16 @@ def main():
         "--no-csv",
         action="store_true",
         help="Disables CSV logging",
+    )
+    parser.add_argument(
+        "--no-feedforward",
+        action="store_true",
+        help="Disables FeedForward compensation",
+    )
+    parser.add_argument(
+        "--no-gesture",
+        action="store_true",
+        help="Disables Gesture control",
     )
 
     args = parser.parse_args()

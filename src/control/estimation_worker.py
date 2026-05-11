@@ -35,6 +35,7 @@ class EstimationWorker(QThread):  # pylint: disable=too-many-instance-attributes
         super().__init__()
         self.state = state
         self.debug = args.debug
+        self.feedforward_disabled = args.no_feedforward
 
         # Initialize Kalman
         self.kalman = KalmanFilter2D()
@@ -105,10 +106,12 @@ class EstimationWorker(QThread):  # pylint: disable=too-many-instance-attributes
             dt = current_time - self.last_time
             self.last_time = current_time
 
+            # FeedForward
             if (
                 self.state.is_tracking_enabled()
                 and (abs(self.pending_steps_x) > 0 or abs(self.pending_steps_y) > 0)
                 and not self.debug
+                and not self.feedforward_disabled
             ):
                 # Max steps hardware can physically traverse in this frame window
                 step_limit_dt = self.max_steps_per_sec * dt
