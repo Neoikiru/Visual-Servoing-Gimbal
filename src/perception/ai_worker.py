@@ -78,7 +78,7 @@ class AIWorker(QThread):  # pylint: disable=too-few-public-methods
                 time.sleep(0.05)
                 continue
 
-            frame, _ = self.state.get_frame()
+            frame, capture_time = self.state.get_frame()
             if frame is None:
                 logger.debug("Frame is None.")
                 time.sleep(0.01)
@@ -122,7 +122,7 @@ class AIWorker(QThread):  # pylint: disable=too-few-public-methods
                 gesture = self.label_mapping.get(int(ort_outputs[0][0]), "Unknown")
 
             # Push results
-            self.state.set_detection(raw_x, raw_y, gesture)
+            self.state.set_detection(raw_x, raw_y, gesture, capture_time)
 
             time.sleep(0.005)
 

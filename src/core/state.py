@@ -32,6 +32,7 @@ class SystemState:  # pylint: disable=too-many-instance-attributes
         self._raw_x: Optional[float] = None
         self._raw_y: Optional[float] = None
         self._gesture: str = "Searching..."
+        self._detection_time: float = 0.0
 
         # Parameters for tuning
         self.horizon: float = cfg["kalman"]["horizon"]  # Predict ahead amount
@@ -106,17 +107,20 @@ class SystemState:  # pylint: disable=too-many-instance-attributes
             ), self._frame_capture_time
 
     # AI Methods
-    def set_detection(self, x: Optional[float], y: Optional[float], gesture: str):
+    def set_detection(
+        self, x: Optional[float], y: Optional[float], gesture: str, capture_time: float
+    ):
         """Sets the latest hand detection results."""
         with self._lock:
             self._raw_x = x
             self._raw_y = y
             self._gesture = gesture
+            self._detection_time = capture_time
 
-    def get_detection(self) -> Tuple[Optional[float], Optional[float], str]:
-        """Returns the latest hand detection results."""
+    def get_detection(self) -> Tuple[Optional[float], Optional[float], str, float]:
+        """Returns the latest hand detection results and its capture time."""
         with self._lock:
-            return self._raw_x, self._raw_y, self._gesture
+            return self._raw_x, self._raw_y, self._gesture, self._detection_time
 
     # Tuning
     def update_tuning(self, horizon: float, q_accel: float, r_noise: float):
