@@ -483,8 +483,8 @@ def main():
         help="Disables CSV logging",
     )
     parser.add_argument(
-        "--no-feedforward",
-        action="store_true",
+        "--feedforward",
+        action="store_false",
         help="Disables FeedForward compensation",
     )
     parser.add_argument(

@@ -35,7 +35,7 @@ class EstimationWorker(QThread):  # pylint: disable=too-many-instance-attributes
         super().__init__()
         self.state = state
         self.debug = args.debug
-        self.feedforward_disabled = args.no_feedforward
+        self.feedforward_disabled = args.feedforward
 
         # Initialize Kalman
         self.kalman = KalmanFilter2D()
@@ -92,7 +92,7 @@ class EstimationWorker(QThread):  # pylint: disable=too-many-instance-attributes
                 time.sleep(0.01)
                 continue
 
-            raw_x, raw_y, gesture = self.state.get_detection()
+            raw_x, raw_y, gesture, _ = self.state.get_detection()
             if time.time() % 1.0 < 0.01:
                 logger.debug("raw_x: %s, raw_y: %s, gesture: %s", raw_x, raw_y, gesture)
 
