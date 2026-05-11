@@ -114,15 +114,15 @@ achieves visual locking while dynamically rejecting sensor noise and AI hallucin
     * **Command Line Arguments (CLI):**
 
       | Argument 	    | Type 	 | Default      	 | Description                                                                          |
-                                                      |---------------|--------|----------------|--------------------------------------------------------------------------------------|
+      |---------------|--------|-----------------|--------------------------------------------------------------------------------------|
       | --camera 	    | int  	 | 4            	 | Hardware index for the USB camera device.                                            |
       | --video  	    | str  	 | None         	 | Path to an offline MP4 test file (overrides live --camera capture and sets --debug). |
       | --port   	    | str  	 | /dev/ttyACM0 	 | Serial port endpoint for the connected Arduino hardware.                             |
       | --baud   	    | int  	 | 115200       	 | Communication baudrate (Must match firmware configuration).                          |
       | --debug  	    | Flag 	 | False        	 | Forces execution into Mock Serial mode, completely bypassing hardware checks.        |
       | --no-csv 	    | Flag 	 | False        	 | Disables automated background telemetry logging to disk.                             |
-      | --no-gesture  | Falg   | False          | Disables tracking control using gestures.                                            |
-      | --feedforward | Flag    | False          | Enables feedforward compenstation for Kalman Filer (problematic).                    |
+      | --no-gesture  | Falg   | False           | Disables tracking control using gestures.                                            |
+      | --feedforward | Flag   | False           | Enables feedforward compenstation for Kalman Filer (problematic).                    |
 
     * Recommended (Without Hardware):
   ```bash
