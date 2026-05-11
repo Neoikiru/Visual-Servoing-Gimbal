@@ -35,7 +35,8 @@ class CSVLogger:
             "filt_y",
             "future_y",
             "latency_ms",
-            "error_px",
+            "prediction_error",
+            "tracking_error",
         ]
         self.is_recording = False
         self.disabled = disabled
@@ -69,7 +70,8 @@ class CSVLogger:
             "filt_y": data.get("filt_y", 0.0),
             "future_y": data.get("future_y", 0.0),
             "latency_ms": data.get("latency", 0.0),
-            "error_px": data.get("error", 0.0),
+            "prediction_error": data.get("prediction_error", 0.0),
+            "tracking_error": data.get("tracking_error", 0.0),
         }
         self.buffer.append(row)
 

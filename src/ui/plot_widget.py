@@ -111,7 +111,7 @@ class TelemetryPlotWidget(QWidget):  # pylint: disable=too-many-instance-attribu
         self.filt_x_data.append(data["filt_x"])
         self.future_x_data.append(data["future_x"])
         self.lat_data.append(data["latency"])
-        self.err_data.append(data["error"])
+        self.err_data.append(data.get("prediction_error", 0.0))
 
         # Convert to numpy for fast PyQtGraph drawing
         t_arr = np.array(self.time_data)

@@ -3,6 +3,7 @@ Tool: Telemetry Analyzer
 Visualizes tracking performance from recorded CSV logs using matplotlib.
 """
 
+import argparse
 import glob
 import os
 from pathlib import Path
@@ -25,7 +26,7 @@ def find_latest_csv(log_dir="logs"):
     return latest_file
 
 
-# pylint: disable=too-many-statements
+# pylint: disable=too-many-statements,too-many-locals
 def analyze_telemetry(csv_path=None):
     """
     Loads telemetry data from a CSV and generates analysis plots.
@@ -97,35 +98,65 @@ def analyze_telemetry(csv_path=None):
 
     # Error
     ax4 = plt.subplot(2, 2, 4)
-    ax4.plot(df["time_sec"], df["error_px"], color="magenta")
 
-    mean_err = df["error_px"].mean()
-    ax4.axhline(
-        mean_err,
-        color="white",
-        linestyle="dashed",
-        label=f"Mean Error: {mean_err:.1f} px",
+    ax4.plot(
+        df["time_sec"],
+        df["prediction_error"],
+        color="magenta",
+        label="Prediction Error",
+        alpha=0.8,
     )
-    ax4.fill_between(df["time_sec"], df["error_px"], color="magenta", alpha=0.2)
-    ax4.set_title("Prediction Error vs Real Raw Position")
+    ax4.plot(
+        df["time_sec"],
+        df["tracking_error"],
+        color="cyan",
+        label="Tracking Error",
+        alpha=0.6,
+    )
+
+    mean_pred_err = df["prediction_error"].mean()
+    ax4.axhline(
+        mean_pred_err,
+        color="magenta",
+        linestyle="dashed",
+        alpha=0.5,
+        label=f"Mean Pred: {mean_pred_err:.1f} px",
+    )
+
+    mean_track_err = df["tracking_error"].mean()
+    ax4.axhline(
+        mean_track_err,
+        color="cyan",
+        linestyle="dashed",
+        alpha=0.5,
+        label=f"Mean Track: {mean_track_err:.1f} px",
+    )
+
+    ax4.set_title("System Error Performance")
     ax4.set_xlabel("Time (Seconds)")
     ax4.set_ylabel("Distance (Pixels)")
-    ax4.legend()
+    ax4.legend(loc="upper right", fontsize=8)
     ax4.grid(color="#333333")
 
     # Accuracy Stats
     total = len(df)
-    acc_20 = len(df[df["error_px"] < 20]) / total * 100
-    acc_50 = len(df[df["error_px"] < 50]) / total * 100
-    acc_100 = len(df[df["error_px"] < 100]) / total * 100
+    acc_20 = len(df[df["prediction_error"] < 20]) / total * 100
+    acc_50 = len(df[df["prediction_error"] < 50]) / total * 100
+    acc_100 = len(df[df["prediction_error"] < 100]) / total * 100
 
     stats_text = (
-        "--- Accuracy Metrics ---\n"
-        f"Mean Error: {mean_err:.1f} px\n"
-        f"Median Error: {df['error_px'].median():.1f} px\n"
-        f"Accuracy (<20px): {acc_20:.1f}%\n"
-        f"Accuracy (<50px): {acc_50:.1f}%\n"
-        f"Accuracy (<100px): {acc_100:.1f}%"
+        "--- System Metrics ---\n"
+        f"Mean Pred Err: {mean_pred_err:.1f} px\n"
+        f"Median Pred Err: {df["prediction_error"].median():.1f} px\n"
+    )
+
+    stats_text += f"Mean Track Err: {df["tracking_error"].mean():.1f} px\n"
+    stats_text += f"Median Track Err: {df["tracking_error"].median():.1f} px\n"
+
+    stats_text += (
+        f"Pred Accuracy (<20px): {acc_20:.1f}%\n"
+        f"Pred Accuracy (<50px): {acc_50:.1f}%\n"
+        f"Pred Accuracy (<100px): {acc_100:.1f}%"
     )
 
     # Add text box to the plot
@@ -140,7 +171,7 @@ def analyze_telemetry(csv_path=None):
         0.95,
         stats_text,
         transform=ax4.transAxes,
-        fontsize=10,
+        fontsize=9,
         verticalalignment="top",
         bbox=props,
         color="white",
@@ -151,4 +182,9 @@ def analyze_telemetry(csv_path=None):
 
 
 if __name__ == "__main__":
-    analyze_telemetry()
+    parser = argparse.ArgumentParser(description="Telemetry Analysis")
+    parser.add_argument(
+        "--path", type=str, default=None, help="Path to the telemetry .csv file"
+    )
+    args = parser.parse_args()
+    analyze_telemetry(csv_path=args.path)

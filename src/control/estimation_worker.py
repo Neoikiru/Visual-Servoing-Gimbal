@@ -251,7 +251,14 @@ class EstimationWorker(QThread):  # pylint: disable=too-many-instance-attributes
 
             # Calculate metrics
             latency_ms = (time.time() - capture_time) * 1000
-            spatial_err = 0.0
+            prediction_error = 0.0
+            tracking_error = 0.0
+
+            if raw_x is not None and raw_y is not None:
+                # Tracking Error: Distance from center to current raw detection
+                tracking_error = math.sqrt(
+                    (raw_x - center_x) ** 2 + (raw_y - center_y) ** 2
+                )
 
             # Find the prediction that was made for this current time
             # We look for the prediction with target_time closest to current_time
@@ -273,7 +280,7 @@ class EstimationWorker(QThread):  # pylint: disable=too-many-instance-attributes
                     break
 
             if best_pred is not None and raw_x is not None and raw_y is not None:
-                spatial_err = math.sqrt(
+                prediction_error = math.sqrt(
                     (best_pred[0] - raw_x) ** 2 + (best_pred[1] - raw_y) ** 2
                 )
 
@@ -286,7 +293,8 @@ class EstimationWorker(QThread):  # pylint: disable=too-many-instance-attributes
                 "filt_y": filt_y,
                 "future_y": float(future_y),
                 "latency": latency_ms,
-                "error": spatial_err,
+                "prediction_error": prediction_error,
+                "tracking_error": tracking_error,
                 "gesture": gesture,
             }
 
